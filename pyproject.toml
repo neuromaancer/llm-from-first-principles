@@ -6,3 +6,8 @@ dependencies = [
     "numpy>=2.5.3",
     "torch>=2.14.0",
 ]
+
+[dependency-groups]
+dev = [
+    "ipykernel>=7.3.0",
+]
