@@ -310,9 +310,9 @@ The repository will grow gradually rather than being generated all at once.
 ```text
 llm-from-first-principles/
 ├── lessons/
-│   ├── 00_tensor_basics.py
-│   ├── 01_tokenization.py
-│   ├── 02_embeddings.py
+│   ├── 00_tensor_basics.ipynb
+│   ├── 01_tokenization.ipynb
+│   ├── 02_embeddings.ipynb
 │   └── ...
 │
 ├── src/
