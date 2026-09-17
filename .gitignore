@@ -216,3 +216,28 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+
+# Local IDE settings
+.vscode/
+
+# Datasets
+data/raw/
+data/processed/
+
+# Model checkpoints
+checkpoints/
+*.pt
+*.pth
+*.ckpt
+
+# Training outputs
+runs/
+outputs/
+logs/
+
+# TensorBoard
+tensorboard/
+
+# Profiling
+*.prof
