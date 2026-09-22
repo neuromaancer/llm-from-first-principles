@@ -3,6 +3,7 @@ name = "llm-from-first-principles"
 version = "0.1.0"
 requires-python = ">=3.13,<3.14"
 dependencies = [
+    "einops>=0.8.2",
     "matplotlib>=3.11.2",
     "numpy>=2.5.3",
     "torch>=2.14.0",
