@@ -245,6 +245,23 @@ The local `.venv/` directory is not committed to Git.
 
 ---
 
+## VS Code learning environment
+
+This repository includes a small shared VS Code configuration under
+[`.vscode/`](.vscode/).
+
+The workspace intentionally disables AI-assisted code completion.
+
+Recommended extensions are also included, covering Python, Pylance,
+Ruff, Jupyter, debugging, and WSL.
+
+The intention is deliberate:
+
+> AI may help explain, question, and review the code, but the learning
+> implementation itself should be typed and reasoned through manually.
+
+---
+
 ## Repository structure
 
 The repository grows gradually rather than being generated all at once.

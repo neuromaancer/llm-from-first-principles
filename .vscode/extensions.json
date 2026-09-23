@@ -1,0 +1,14 @@
+{
+    "recommendations": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-python.debugpy",
+        "charliermarsh.ruff",
+        "ms-toolsai.jupyter",
+        "ms-vscode-remote.remote-wsl"
+    ],
+    "unwantedRecommendations": [
+        "github.copilot",
+        "github.copilot-chat"
+    ]
+}
