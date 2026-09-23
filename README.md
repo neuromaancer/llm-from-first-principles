@@ -2,71 +2,217 @@
 
 Building a small language model from scratch to understand every tensor, operation, and gradient.
 
-The goal of this project is not to build the largest or most capable model possible.  
-It is to understand how a modern decoder-only language model works by implementing its components step by step with minimal abstraction.
+This repository is my public learning log for understanding modern language models from the bottom up.
 
-Instead of starting from high-level libraries such as Hugging Face `Trainer`, the project begins with basic tensor operations and gradually builds toward a trainable Transformer language model.
+The goal is **not** to reproduce a large model, hide complexity behind high-level frameworks, or reach a benchmark as quickly as possible.
+
+The goal is to reach the point where I can look at a Transformer and explain:
+
+- what every tensor represents,
+- why it has that shape,
+- what every operation does,
+- how gradients flow through it,
+- and what changes when the architecture is modified.
+
+The project therefore starts below the Transformer itself: tensor operations, numerical stability, autodiff, tokenization, batching, losses, optimizers, and training loops — before building attention and eventually a complete decoder-only language model.
+
+> **Learning rule:** every implementation in this repository is typed and worked through manually.
+>
+> AI code completion is disabled. AI may be used as a tutor for explanations, derivations, questions, discussion, and code review, but not as an autocomplete or bulk code-generation workflow.
+>
+> **If I cannot explain a line of code, it does not belong here yet.**
 
 ---
 
-## Goals
+## What this repository is — and is not
 
-By the end of this project, I want to be able to explain and implement:
+This is primarily a **learning repository**, not a production LLM framework.
 
-- tensor shapes, dimensions, indexing, broadcasting, and matrix multiplication
-- tokenization and vocabulary construction
-- token and positional embeddings
-- language modeling objectives and cross-entropy loss
-- scaled dot-product attention
-- causal self-attention
-- multi-head attention (MHA)
-- multi-query attention (MQA)
-- grouped-query attention (GQA)
-- Transformer blocks
-- normalization, residual connections, and MLPs
-- training loops and optimization
-- autoregressive generation
-- KV caching
-- alternative attention mechanisms such as linear attention
-- basic benchmarking of memory, throughput, and latency
+Educational implementations intentionally favor clarity over efficiency. Intermediate tensors may stay visible, algorithms may first be implemented explicitly, and related mechanisms may initially be written separately when that makes their differences easier to understand.
 
-The emphasis is always on understanding **what happens to the tensors**.
+Once a mechanism has been implemented, derived, and verified, later lessons are free to use mature PyTorch primitives instead of repeatedly rebuilding the same idea.
+
+The point is not to reinvent PyTorch forever. The point is to understand what PyTorch is doing before relying on it.
+
+---
+
+## Lessons
+
+The notebooks are intended to be read in order.
+
+| Lesson | Topic | Status |
+|---|---|---|
+| [00](lessons/00_tensor_basics.ipynb) | Tensor Basics | ✅ Complete |
+| [01](lessons/01_autograd_from_scratch.ipynb) | Autograd from Scratch | ✅ Complete |
+| [02](lessons/02_text_and_tokenization.ipynb) | Text and Tokenization | ✅ Complete |
+| [03](lessons/03_sequences_and_batching.ipynb) | Sequences and Batching | ✅ Complete |
+| [04](lessons/04_embeddings_and_linear_layers.ipynb) | Embeddings and Linear Layers | ✅ Complete |
+| [05](lessons/05_language_modeling_objectives.ipynb) | Language Modeling Objectives | ✅ Complete |
+| [06](lessons/06_optimizers_from_scratch.ipynb) | Optimizers from Scratch | ✅ Complete |
+| [07](lessons/07_training_loop_from_scratch.ipynb) | Training Loop from Scratch | ✅ Complete |
+| [08](lessons/08_causal_self_attention.ipynb) | Causal Self-Attention | ✅ Complete |
+| [09](lessons/09_multi_head_attention.ipynb) | Multi-Head Attention | ✅ Complete |
+| [10](lessons/10_normalization_and_feed_forward.ipynb) | Normalization and Feed-Forward Networks | ✅ Complete |
+| 11 | Positional Information | 🚧 Next |
+| 12 | Transformer Blocks and GPT | Planned |
+| 13 | Generation and KV Cache | Planned |
+| 14 | Multi-Query and Grouped-Query Attention | Planned |
+| 15 | Linear Attention | Planned |
 
 ---
 
 ## Learning philosophy
 
-This repository follows a few rules:
+This repository follows a few rules.
 
-1. **Build from simple operations upward.**  
-   Understand `reshape`, `transpose`, broadcasting, matrix multiplication, and softmax before using them inside attention.
+### 1. Build from simple operations upward
 
-2. **Predict tensor shapes before running the code.**  
-   Shapes should become something that can be reasoned about, not something discovered through trial and error.
+Understand `reshape`, `transpose`, broadcasting, matrix multiplication, reductions, and softmax before using them inside attention.
 
-3. **Prefer explicit implementations first.**  
-   For example, attention starts from:
+### 2. Predict tensor shapes before running the code
 
-   ```python
-   q = x @ W_q
-   k = x @ W_k
-   v = x @ W_v
+Shapes should become something that can be reasoned about, not something discovered through trial and error.
 
-   scores = q @ k.transpose(-2, -1)
-   weights = softmax(scores)
-   output = weights @ v
-   ```
+### 3. Implement new mechanisms explicitly
 
-   Higher-level abstractions come later.
+When a mechanism is the object of study, implement it in a transparent way first.
 
-4. **Refactor only after understanding the duplication.**  
-   MHA, MQA, and GQA may initially be implemented separately before extracting their common structure.
+Examples include:
 
-5. **Keep lessons separate from production-style implementations.**  
-   Educational code can be verbose and contain intermediate tensors and shape checks.
+- numerically stable softmax,
+- scalar reverse-mode autodiff,
+- BPE,
+- cross-entropy from logits,
+- SGD, Momentum, Adam, and AdamW,
+- causal masking,
+- attention,
+- normalization,
+- residual connections,
+- and gated feed-forward networks.
 
-6. **Use AI as a teacher, not as an autocomplete engine.**  
-   The coding environment used for this project disables AI code completion so that the implementation is typed and reasoned through manually.
+### 4. Reuse a mechanism once it is understood
+
+A later notebook does not need to reimplement a mechanism that has already been derived and verified.
+
+For example, once cross-entropy has been implemented manually, later training code can use `torch.nn.functional.cross_entropy`.
+
+The purpose is understanding, not ritual duplication.
+
+### 5. Prefer explicit tensor semantics
+
+The central question is always:
+
+> What happens to the tensor?
+
+For attention, that means reasoning through transformations such as:
+
+```text
+(B, T, C)
+    ↓
+Q, K, V
+    ↓
+(B, H, T, D)
+    ↓
+QKᵀ
+    ↓
+(B, H, T, T)
+    ↓
+softmax
+    ↓
+weighted sum of V
+    ↓
+(B, T, C)
+```
+
+### 6. Refactor only after understanding the duplication
+
+MHA, MQA, and GQA may initially be implemented separately before extracting their common structure.
+
+Abstraction should follow understanding, not hide what has not yet been understood.
+
+### 7. Keep lessons separate from reusable implementations
+
+`lessons/` contains verbose educational notebooks with derivations, intermediate tensors, sanity checks, and reference comparisons.
+
+A future `src/` package will contain cleaner reusable implementations after the underlying mechanisms are understood.
+
+### 8. Use AI as a teacher, not as an autocomplete engine
+
+The coding environment used for this project disables AI code completion.
+
+AI can help challenge an explanation, discuss a derivation, review an implementation, or suggest questions to investigate. The actual learning code is typed and reasoned through manually.
+
+---
+
+## What is being built
+
+The long-term target is a small, extensible decoder-only language model.
+
+The path is deliberately incremental:
+
+```text
+Foundations
+├── tensors
+├── scalar autograd
+├── tokenization
+├── sequences and batching
+├── embeddings
+├── language-modeling objectives
+├── optimizers
+└── training loop
+
+Transformer fundamentals
+├── causal self-attention
+├── multi-head attention
+├── normalization
+├── residual connections
+├── MLP / SwiGLU
+├── positional information
+└── decoder block
+
+Tiny GPT
+├── complete decoder-only model
+├── end-to-end training
+├── checkpointing
+└── autoregressive generation
+
+Inference
+├── temperature
+├── top-k / top-p sampling
+└── KV cache
+
+Attention variants
+├── MHA
+├── MQA
+├── GQA
+└── linear attention
+
+Experiments
+├── parameter count
+├── training and validation loss
+├── tokens / second
+├── GPU memory
+├── inference latency
+└── KV-cache memory
+```
+
+---
+
+## How to use this repository
+
+The notebooks are not a collection of final answers. They are a record of successive stages of understanding.
+
+A useful way to follow the project is:
+
+1. read the explanation before the code,
+2. predict tensor shapes before running a cell,
+3. derive the operation on paper,
+4. implement it yourself,
+5. test edge cases,
+6. compare it against a trusted PyTorch implementation when appropriate,
+7. only then move to the next abstraction.
+
+If you are following along, typing the code yourself is strongly recommended.
 
 ---
 
@@ -76,63 +222,18 @@ Primary development environment:
 
 - WSL2 / Linux
 - Python 3.13
-- [`uv`](https://docs.astral.sh/uv/) for Python and dependency management
+- [uv](https://docs.astral.sh/uv/) for environment and dependency management
 - PyTorch
+- Jupyter
 - VS Code
 
-The project environment is reproducible through:
+Install the project environment with:
 
 ```bash
 uv sync
 ```
 
-Run Python inside the project environment with:
-
-```bash
-uv run python
-```
-
-For example:
-
-```bash
-uv run python lessons/00_tensor_basics.py
-```
-
-The `.venv/` directory is local and is not committed to Git.
-
----
-
-## VS Code setup
-
-A dedicated VS Code profile is used for this project so that the learning environment remains minimal.
-
-Recommended extensions:
-
-- Python
-- Pylance
-- Python Debugger
-- Ruff
-- WSL
-- Jupyter (optional, mainly for visualization and small experiments)
-
-AI-assisted code completion is disabled for this profile.
-
-Useful settings include:
-
-```json
-{
-    "chat.disableAIFeatures": true,
-    "editor.inlineSuggest.enabled": false,
-    "python.analysis.typeCheckingMode": "basic",
-    "[python]": {
-        "editor.formatOnSave": true,
-        "editor.defaultFormatter": "charliermarsh.ruff"
-    },
-    "editor.rulers": [88],
-    "files.trimTrailingWhitespace": true,
-    "files.insertFinalNewline": true
-}
-```
+The lessons are Jupyter notebooks and can be opened directly in VS Code or through Jupyter.
 
 The project interpreter should point to:
 
@@ -140,204 +241,36 @@ The project interpreter should point to:
 .venv/bin/python
 ```
 
----
-
-## Roadmap
-
-### Stage 0 — Tensor thinking
-
-Learn the tensor operations that everything else will be built from:
-
-- scalar, vector, matrix, tensor
-- `ndim` and `shape`
-- indexing and slicing
-- `squeeze` / `unsqueeze`
-- `reshape`
-- `transpose`
-- broadcasting
-- element-wise operations
-- matrix multiplication
-- reductions
-- softmax
-
-### Stage 1 — Text and tokenization
-
-Build the first language-model input pipeline:
-
-- characters and tokens
-- vocabulary
-- encoding and decoding
-- context windows
-- input/target sequence construction
-- batching
-
-Start with a character-level tokenizer before moving to subword tokenization.
-
-### Stage 2 — First language model
-
-Implement a small baseline model:
-
-- embedding lookup
-- logits
-- next-token prediction
-- cross-entropy loss
-- gradient descent
-- training loop
-- autoregressive sampling
-
-A bigram language model provides the first end-to-end training system.
-
-### Stage 3 — Attention
-
-Build attention from tensor operations:
-
-```text
-input
-  ↓
-Q, K, V projections
-  ↓
-QKᵀ
-  ↓
-scaling
-  ↓
-causal mask
-  ↓
-softmax
-  ↓
-weighted sum of V
-```
-
-Then implement:
-
-- scaled dot-product attention
-- causal self-attention
-- multi-head attention
-
-### Stage 4 — Transformer
-
-Combine the components into a decoder-only Transformer:
-
-```text
-tokens
-  ↓
-embeddings
-  ↓
-Transformer block × N
-  ↓
-normalization
-  ↓
-language-model head
-  ↓
-logits
-```
-
-Each block will eventually contain:
-
-```text
-x
-├── normalization
-├── attention
-├── residual connection
-├── normalization
-├── MLP
-└── residual connection
-```
-
-### Stage 5 — Train a Tiny GPT
-
-Train a small decoder-only language model end to end.
-
-Possible progression:
-
-```text
-tiny custom corpus
-        ↓
-Tiny Shakespeare
-        ↓
-TinyStories subset
-        ↓
-larger text corpora
-```
-
-The first useful models will remain deliberately small enough to train on modest hardware.
-
-### Stage 6 — Modern attention variants
-
-Once standard MHA is fully understood, extend the implementation with:
-
-```text
-attention/
-├── mha.py
-├── mqa.py
-├── gqa.py
-└── linear.py
-```
-
-The Transformer block should eventually depend only on a common attention interface rather than on a specific implementation.
-
-This makes it possible to compare attention mechanisms while keeping the rest of the model fixed.
-
-### Stage 7 — Benchmarking and deeper experiments
-
-Compare variants using measurements such as:
-
-- parameter count
-- training loss
-- validation loss
-- tokens / second
-- GPU memory usage
-- inference latency
-- KV-cache memory
-- scaling with sequence length
-
-Later experiments may also include:
-
-- sliding-window attention
-- alternative positional encodings
-- RMSNorm vs LayerNorm
-- different MLP activations
-- weight tying
-- mixed precision
-- `torch.compile`
-- custom kernels
+The local `.venv/` directory is not committed to Git.
 
 ---
 
-## Planned repository structure
+## Repository structure
 
-The repository will grow gradually rather than being generated all at once.
+The repository grows gradually rather than being generated all at once.
 
 ```text
 llm-from-first-principles/
 ├── lessons/
 │   ├── 00_tensor_basics.ipynb
-│   ├── 01_tokenization.ipynb
-│   ├── 02_embeddings.ipynb
-│   └── ...
+│   ├── 01_autograd_from_scratch.ipynb
+│   ├── 02_text_and_tokenization.ipynb
+│   ├── 03_sequences_and_batching.ipynb
+│   ├── 04_embeddings_and_linear_layers.ipynb
+│   ├── 05_language_modeling_objectives.ipynb
+│   ├── 06_optimizers_from_scratch.ipynb
+│   ├── 07_training_loop_from_scratch.ipynb
+│   ├── 08_causal_self_attention.ipynb
+│   ├── 09_multi_head_attention.ipynb
+│   └── 10_normalization_and_feed_forward.ipynb
 │
-├── src/
-│   └── llmfp/
-│       ├── data/
-│       ├── tokenization/
-│       ├── nn/
-│       │   ├── attention/
-│       │   ├── embedding.py
-│       │   ├── normalization.py
-│       │   ├── mlp.py
-│       │   └── transformer_block.py
-│       ├── models/
-│       └── training/
-│
-├── scripts/
-├── tests/
-├── configs/
+├── src/                 # reusable implementations will grow here later
+├── data/                # large/generated datasets are not committed
+├── checkpoints/         # ignored
 ├── pyproject.toml
-└── uv.lock
+├── uv.lock
+└── README.md
 ```
-
-`lessons/` contains explicit educational implementations.
-
-`src/` will contain cleaner reusable implementations created after the underlying concepts are understood.
 
 ---
 
@@ -356,44 +289,41 @@ outputs/
 logs/
 ```
 
-Small teaching datasets may still be committed when they help explain an implementation.
+Small teaching datasets may still be committed when they are useful for explaining an implementation.
 
 ---
 
 ## Git workflow
 
-Development uses small, meaningful commits following the
-[Conventional Commits](https://www.conventionalcommits.org/) format.
+Development uses small, meaningful commits following the [Conventional Commits](https://www.conventionalcommits.org/) format.
 
 Examples:
 
 ```text
-chore(env): initialize Python environment
-feat(tensors): add tensor fundamentals lesson
-feat(tokenizer): implement character tokenizer
-feat(attention): implement scaled dot-product attention
-test(attention): verify causal masking
-refactor(attention): unify MHA and GQA projections
-perf(attention): reduce KV cache memory usage
-docs(readme): document project goals and roadmap
+feat(autograd): implement scalar reverse-mode autodiff
+feat(tokenization): implement character and byte-level BPE concepts
+feat(attention): implement causal self-attention
+feat(attention): implement multi-head causal attention
+feat(transformer): implement normalization and gated feed-forward networks
+docs(readme): update learning philosophy and project progress
 ```
 
-A change should normally be inspected before committing:
-
-```bash
-git status
-git diff
-git diff --staged
-```
+The Git history is part of the learning record: small commits make it possible to see how the model was built one concept at a time.
 
 ---
 
 ## Current status
 
-The project is currently at:
+Lessons **00–10** are complete.
+
+Next:
 
 ```text
-Stage 0 — Tensor thinking
+11_positional_information.ipynb
 ```
 
-The first goal is to develop an intuitive understanding of tensor dimensions and shape transformations before moving into matrix multiplication and attention.
+The next question is fundamental:
+
+> If self-attention compares token representations by content, how does the model know where each token occurs in the sequence?
+
+That leads to learned positional embeddings, sinusoidal positional encodings, and Rotary Position Embeddings (RoPE).
