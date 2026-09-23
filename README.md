@@ -53,7 +53,7 @@ The notebooks are intended to be read in order.
 | [08](lessons/08_causal_self_attention.ipynb) | Causal Self-Attention | ✅ Complete |
 | [09](lessons/09_multi_head_attention.ipynb) | Multi-Head Attention | ✅ Complete |
 | [10](lessons/10_normalization_and_feed_forward.ipynb) | Normalization and Feed-Forward Networks | ✅ Complete |
-| 11 | Positional Information | 🚧 Next |
+| 11 | Positional Information | 🚧 In Progress |
 | 12 | Transformer Blocks and GPT | Planned |
 | 13 | Generation and KV Cache | Planned |
 | 14 | Multi-Query and Grouped-Query Attention | Planned |
@@ -333,7 +333,7 @@ The Git history is part of the learning record: small commits make it possible t
 
 Lessons **00–10** are complete.
 
-Next:
+Currently working on:
 
 ```text
 11_positional_information.ipynb
