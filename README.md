@@ -54,7 +54,7 @@ The notebooks are intended to be read in order.
 | [09](lessons/09_multi_head_attention.ipynb) | Multi-Head Attention | ✅ Complete |
 | [10](lessons/10_normalization_and_feed_forward.ipynb) | Normalization and Feed-Forward Networks | ✅ Complete |
 | [11](lessons/11_positional_information.ipynb) | Positional Information | ✅ Complete |
-| 12 | Transformer Blocks and GPT | 🚧 Next |
+| 12 | Transformer Blocks and GPT | 🚧 In Progress |
 | 13 | Generation and KV Cache | Planned |
 | 14 | Multi-Query and Grouped-Query Attention | Planned |
 | 15 | Linear Attention | Planned |
@@ -333,7 +333,7 @@ The Git history is part of the learning record: small commits make it possible t
 
 Lessons **00–11** are complete.
 
-Next:
+Currently working on:
 
 ```text
 12_transformer_blocks_and_gpt.ipynb
