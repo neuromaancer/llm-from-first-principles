@@ -13,3 +13,6 @@ dependencies = [
 dev = [
     "ipykernel>=7.3.0",
 ]
+
+[tool.ruff.lint]
+extend-select = ["I"]
