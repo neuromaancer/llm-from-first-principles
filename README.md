@@ -279,7 +279,8 @@ llm-from-first-principles/
 │   ├── 07_training_loop_from_scratch.ipynb
 │   ├── 08_causal_self_attention.ipynb
 │   ├── 09_multi_head_attention.ipynb
-│   └── 10_normalization_and_feed_forward.ipynb
+│   ├── 10_normalization_and_feed_forward.ipynb
+│   └── 11_positional_information.ipynb
 │
 ├── src/                 # reusable implementations will grow here later
 ├── data/                # large/generated datasets are not committed
@@ -339,8 +340,29 @@ Currently working on:
 12_transformer_blocks_and_gpt.ipynb
 ```
 
-The next question is fundamental:
+The current goal is to assemble the components studied so far into a complete decoder-only Transformer.
 
-> If self-attention compares token representations by content, how does the model know where each token occurs in the sequence?
+The model now combines:
 
-That leads to learned positional embeddings, sinusoidal positional encodings, and Rotary Position Embeddings (RoPE).
+- token embeddings,
+- pre-norm residual blocks,
+- RoPE-aware causal multi-head attention,
+- RMSNorm,
+- SwiGLU feed-forward networks,
+- stacked Transformer blocks,
+- a final normalization layer,
+- and a language-model head.
+
+The main learning question has shifted from understanding individual mechanisms to understanding how those mechanisms compose while preserving the residual-stream shape:
+
+```text
+(B, T, C)
+    ↓
+Transformer block × N
+    ↓
+(B, T, C)
+    ↓
+LM head
+    ↓
+(B, T, V)
+```
