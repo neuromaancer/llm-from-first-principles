@@ -54,8 +54,8 @@ The notebooks are intended to be read in order.
 | [09](lessons/09_multi_head_attention.ipynb) | Multi-Head Attention | ✅ Complete |
 | [10](lessons/10_normalization_and_feed_forward.ipynb) | Normalization and Feed-Forward Networks | ✅ Complete |
 | [11](lessons/11_positional_information.ipynb) | Positional Information | ✅ Complete |
-| 12 | Transformer Blocks and GPT | 🚧 In Progress |
-| 13 | Generation and KV Cache | Planned |
+| [12](lessons/12_transformer_blocks_and_gpt.ipynb) | Transformer Blocks and GPT | ✅ Complete |
+| 13 | Generation and KV Cache | 🚧 Next |
 | 14 | Multi-Query and Grouped-Query Attention | Planned |
 | 15 | Linear Attention | Planned |
 
@@ -280,7 +280,8 @@ llm-from-first-principles/
 │   ├── 08_causal_self_attention.ipynb
 │   ├── 09_multi_head_attention.ipynb
 │   ├── 10_normalization_and_feed_forward.ipynb
-│   └── 11_positional_information.ipynb
+│   ├── 11_positional_information.ipynb
+│   └── 12_transformer_blocks_and_gpt.ipynb
 │
 ├── src/                 # reusable implementations will grow here later
 ├── data/                # large/generated datasets are not committed
@@ -332,37 +333,33 @@ The Git history is part of the learning record: small commits make it possible t
 
 ## Current status
 
-Lessons **00–11** are complete.
+Lessons **00–12** are complete.
 
-Currently working on:
-
-```text
-12_transformer_blocks_and_gpt.ipynb
-```
-
-The current goal is to assemble the components studied so far into a complete decoder-only Transformer.
-
-The model now combines:
-
-- token embeddings,
-- pre-norm residual blocks,
-- RoPE-aware causal multi-head attention,
-- RMSNorm,
-- SwiGLU feed-forward networks,
-- stacked Transformer blocks,
-- a final normalization layer,
-- and a language-model head.
-
-The main learning question has shifted from understanding individual mechanisms to understanding how those mechanisms compose while preserving the residual-stream shape:
+Next:
 
 ```text
-(B, T, C)
-    ↓
-Transformer block × N
-    ↓
-(B, T, C)
-    ↓
-LM head
-    ↓
-(B, T, V)
+13_generation_and_kv_cache.ipynb
 ```
+
+The model is now a complete trainable decoder-only Transformer:
+
+```text
+token IDs
+    ↓
+Token Embedding
+    ↓
+Transformer Block × N
+    ↓
+Final RMSNorm
+    ↓
+LM Head
+    ↓
+logits
+```
+
+The next step moves from full-sequence training to autoregressive inference:
+
+- generate one token at a time,
+- control sampling with temperature, top-k, and top-p,
+- understand why naive generation repeatedly recomputes old keys and values,
+- and implement a KV cache for efficient decoding.
