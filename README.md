@@ -38,7 +38,7 @@ The point is not to reinvent PyTorch forever. The point is to understand what Py
 
 ## Lessons
 
-The notebooks are intended to be read in order. The roadmap is organized into two major parts: first understand the language model itself, then understand how modern LLMs are post-trained.
+The notebooks are intended to be read in order. The roadmap is organized into four stages: first understand the language model itself, then pretrain a tiny GPT end to end, then build the reinforcement-learning foundations needed for post-training, and finally study modern LLM post-training objectives.
 
 ### Part I — Language Models from First Principles
 
@@ -61,21 +61,36 @@ The notebooks are intended to be read in order. The roadmap is organized into tw
 | [14](lessons/14_multi_query_and_grouped_query_attention.ipynb) | Multi-Query and Grouped-Query Attention | ✅ Complete |
 | 15 | Linear Attention | 🚧 In Progress |
 
-### Part II — Reinforcement Learning and LLM Post-Training
+### Part II — Pretraining a Tiny GPT
 
 | Lesson | Topic | Status |
 |---|---|---|
-| 16 | RL Foundations: Return, Value, Q, Advantage, Bellman Equations | Planned |
-| 17 | Policy Gradients and REINFORCE from Scratch | Planned |
-| 18 | Actor-Critic, TD Learning, and GAE | Planned |
-| 19 | PPO from Scratch | Planned |
-| 20 | Supervised Fine-Tuning (SFT) | Planned |
-| 21 | Preference Data and Reward Modeling | Planned |
-| 22 | RLHF with PPO | Planned |
-| 23 | Direct Preference Optimization (DPO) | Planned |
-| 24 | Modern LLM RL and Preference Optimization | Planned |
+| 16 | Pretraining a Tiny GPT End to End | Planned |
 
-The second part deliberately separates the ideas that are often hidden behind training frameworks. The goal is to derive the objectives first, implement small versions explicitly, and only then connect them to LLM post-training.
+This lesson is the integration point for Part I. It connects raw text, tokenization, batching, the decoder-only model, cross-entropy, AdamW, learning-rate scheduling, validation, checkpoints, perplexity, and generation in one real training run.
+
+### Part III — Reinforcement Learning from First Principles
+
+| Lesson | Topic | Status |
+|---|---|---|
+| 17 | RL Foundations: Trajectories, Return, Value, Q, Advantage, Bellman Equations | Planned |
+| 18 | Policy Gradients and REINFORCE from Scratch | Planned |
+| 19 | Actor-Critic, TD Learning, and GAE | Planned |
+| 20 | PPO from Scratch | Planned |
+
+The RL section is intentionally focused. It does not try to reproduce a complete general-purpose RL curriculum; it develops the concepts needed to understand LLM post-training objectives from first principles.
+
+### Part IV — LLM Post-Training
+
+| Lesson | Topic | Status |
+|---|---|---|
+| 21 | Supervised Fine-Tuning (SFT) | Planned |
+| 22 | Preference Data, Sequence Log-Probabilities, and Reward Modeling | Planned |
+| 23 | RLHF with PPO and KL Regularization | Planned |
+| 24 | Direct Preference Optimization (DPO) | Planned |
+| 25 | Modern LLM RL and Preference Optimization | Planned |
+
+The post-training section will connect token-level language modeling to sequence-level optimization. It will make explicit the roles of completion log-probabilities, reference policies, KL penalties, pairwise preferences, learned rewards, and policy optimization before using higher-level training frameworks.
 
 ---
 
@@ -180,7 +195,7 @@ AI can help challenge an explanation, discuss a derivation, review an implementa
 
 ## What is being built
 
-The long-term target is broader than a small GPT implementation. The repository aims to trace the path from tensors to a modern post-trained language model while keeping every major abstraction explainable.
+The long-term target is broader than a small GPT implementation. The repository aims to trace the path from tensors to a pretrained language model and then to a modern post-trained assistant while keeping every major abstraction explainable.
 
 The path is deliberately incremental:
 
@@ -199,8 +214,21 @@ Part I — Language model foundations
 ├── MQA / GQA
 └── linear attention
 
-Part II — Reinforcement-learning foundations
-├── trajectories, returns, and discounting
+Part II — End-to-end pretraining
+├── raw text → training tokens
+├── train / validation split
+├── sequence windows and batches
+├── GPT forward pass
+├── cross-entropy and backpropagation
+├── AdamW and learning-rate scheduling
+├── gradient clipping
+├── checkpoints
+├── validation loss and perplexity
+└── generation from the trained model
+
+Part III — Reinforcement-learning foundations
+├── states, actions, trajectories, and rewards
+├── returns and discounting
 ├── V(s), Q(s,a), and advantage
 ├── Bellman equations
 ├── Monte Carlo estimation
@@ -211,12 +239,13 @@ Part II — Reinforcement-learning foundations
 ├── generalized advantage estimation
 └── PPO
 
-Part III — LLM post-training
+Part IV — LLM post-training
 ├── supervised fine-tuning
 ├── chat formatting and assistant-only loss
+├── token-level and sequence-level log-probabilities
 ├── preference datasets
 ├── pairwise reward modeling
-├── KL-regularized objectives
+├── reference policies and KL regularization
 ├── RLHF with PPO
 ├── direct preference optimization
 └── modern LLM RL / preference optimization
@@ -224,16 +253,17 @@ Part III — LLM post-training
 Experiments
 ├── parameter count
 ├── training and validation loss
+├── perplexity
 ├── tokens / second
 ├── GPU memory
 ├── inference latency
 ├── KV-cache memory
 ├── reward / preference accuracy
 ├── policy KL
-└── post-training behavior comparisons
+└── pretraining and post-training behavior comparisons
 ```
 
-The intention is not to implement every algorithm ever used in reinforcement learning. The RL section focuses on the concepts needed to understand modern LLM post-training from first principles.
+The intention is not to implement every architecture or every reinforcement-learning algorithm. The main path focuses on the concepts required to understand how a decoder-only language model is built, pretrained, and post-trained from first principles.
 
 ---
 
@@ -396,14 +426,20 @@ Currently working on:
 15_linear_attention.ipynb
 ```
 
-Lesson 15 closes the first major phase of the project: understanding the core mechanics of a decoder-only language model and its attention/inference variants.
+Lesson 15 closes the architecture-focused portion of the first phase. The next step is not RL immediately: Lesson 16 will first integrate the pieces learned so far into a real tiny-GPT pretraining run.
 
-After that, the repository moves into a second phase:
+The roadmap from there is:
 
 ```text
+core LM mechanisms
+    ↓
+linear attention
+    ↓
+pretrain a tiny GPT end to end
+    ↓
 RL foundations
     ↓
-policy gradients
+policy gradients / REINFORCE
     ↓
 actor-critic + GAE
     ↓
@@ -411,11 +447,13 @@ PPO
     ↓
 SFT
     ↓
-preference / reward modeling
+sequence log-probabilities + preference / reward modeling
     ↓
-RLHF
+RLHF + KL regularization
     ↓
-DPO and modern LLM post-training
+DPO
+    ↓
+modern LLM RL / preference optimization
 ```
 
 The reusable attention implementation already treats the number of query heads and key/value heads as independent architectural choices:
@@ -440,6 +478,10 @@ The current question is:
 
 > Can attention avoid explicitly constructing a full T × T attention matrix?
 
-That leads to linear attention. The next major question after that is:
+That leads to linear attention.
 
-> How do we turn a pretrained language model into a model that learns from actions, preferences, and human feedback?
+The next integration question will be:
+
+> Can all of the components learned so far train a real tiny language model from raw text to generated samples?
+
+Only after that do we move from language modeling into reinforcement learning and post-training.
