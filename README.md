@@ -14,7 +14,7 @@ The goal is to reach the point where I can look at a Transformer and explain:
 - how gradients flow through it,
 - and what changes when the architecture is modified.
 
-The project therefore starts below the Transformer itself: tensor operations, numerical stability, autodiff, tokenization, batching, losses, optimizers, and training loops — before building attention and eventually a complete decoder-only language model.
+The project therefore starts below the Transformer itself: tensor operations, numerical stability, autodiff, tokenization, batching, losses, optimizers, and training loops — before building attention and a complete decoder-only language model. From there, it continues into inference, reinforcement-learning foundations, supervised fine-tuning, preference learning, RLHF, and modern LLM post-training.
 
 > **Learning rule:** every implementation in this repository is typed and worked through manually.
 >
@@ -38,7 +38,9 @@ The point is not to reinvent PyTorch forever. The point is to understand what Py
 
 ## Lessons
 
-The notebooks are intended to be read in order.
+The notebooks are intended to be read in order. The roadmap is organized into two major parts: first understand the language model itself, then understand how modern LLMs are post-trained.
+
+### Part I — Language Models from First Principles
 
 | Lesson | Topic | Status |
 |---|---|---|
@@ -58,6 +60,22 @@ The notebooks are intended to be read in order.
 | [13](lessons/13_generation_and_kv_cache.ipynb) | Generation and KV Cache | ✅ Complete |
 | [14](lessons/14_multi_query_and_grouped_query_attention.ipynb) | Multi-Query and Grouped-Query Attention | ✅ Complete |
 | 15 | Linear Attention | 🚧 In Progress |
+
+### Part II — Reinforcement Learning and LLM Post-Training
+
+| Lesson | Topic | Status |
+|---|---|---|
+| 16 | RL Foundations: Return, Value, Q, Advantage, Bellman Equations | Planned |
+| 17 | Policy Gradients and REINFORCE from Scratch | Planned |
+| 18 | Actor-Critic, TD Learning, and GAE | Planned |
+| 19 | PPO from Scratch | Planned |
+| 20 | Supervised Fine-Tuning (SFT) | Planned |
+| 21 | Preference Data and Reward Modeling | Planned |
+| 22 | RLHF with PPO | Planned |
+| 23 | Direct Preference Optimization (DPO) | Planned |
+| 24 | Modern LLM RL and Preference Optimization | Planned |
+
+The second part deliberately separates the ideas that are often hidden behind training frameworks. The goal is to derive the objectives first, implement small versions explicitly, and only then connect them to LLM post-training.
 
 ---
 
@@ -162,46 +180,46 @@ AI can help challenge an explanation, discuss a derivation, review an implementa
 
 ## What is being built
 
-The long-term target is a small, extensible decoder-only language model.
+The long-term target is broader than a small GPT implementation. The repository aims to trace the path from tensors to a modern post-trained language model while keeping every major abstraction explainable.
 
 The path is deliberately incremental:
 
 ```text
-Foundations
-├── tensors
-├── scalar autograd
-├── tokenization
-├── sequences and batching
-├── embeddings
-├── language-modeling objectives
-├── optimizers
-└── training loop
-
-Transformer fundamentals
+Part I — Language model foundations
+├── tensors and scalar autodiff
+├── tokenization and batching
+├── objectives and optimizers
 ├── causal self-attention
 ├── multi-head attention
-├── normalization
-├── residual connections
-├── MLP / SwiGLU
-├── positional information
-└── decoder block
-
-Tiny GPT
-├── complete decoder-only model
-├── end-to-end training
-├── checkpointing
-└── autoregressive generation
-
-Inference
-├── temperature
-├── top-k / top-p sampling
-└── KV cache
-
-Attention variants
-├── MHA
-├── MQA
-├── GQA
+├── normalization and SwiGLU
+├── positional information and RoPE
+├── decoder-only GPT
+├── generation and sampling
+├── KV caching
+├── MQA / GQA
 └── linear attention
+
+Part II — Reinforcement-learning foundations
+├── trajectories, returns, and discounting
+├── V(s), Q(s,a), and advantage
+├── Bellman equations
+├── Monte Carlo estimation
+├── policy gradients / REINFORCE
+├── baselines and variance reduction
+├── actor-critic methods
+├── temporal-difference learning
+├── generalized advantage estimation
+└── PPO
+
+Part III — LLM post-training
+├── supervised fine-tuning
+├── chat formatting and assistant-only loss
+├── preference datasets
+├── pairwise reward modeling
+├── KL-regularized objectives
+├── RLHF with PPO
+├── direct preference optimization
+└── modern LLM RL / preference optimization
 
 Experiments
 ├── parameter count
@@ -209,8 +227,13 @@ Experiments
 ├── tokens / second
 ├── GPU memory
 ├── inference latency
-└── KV-cache memory
+├── KV-cache memory
+├── reward / preference accuracy
+├── policy KL
+└── post-training behavior comparisons
 ```
+
+The intention is not to implement every algorithm ever used in reinforcement learning. The RL section focuses on the concepts needed to understand modern LLM post-training from first principles.
 
 ---
 
@@ -373,17 +396,37 @@ Currently working on:
 15_linear_attention.ipynb
 ```
 
-The reusable attention implementation now treats the number of query heads and
-key/value heads as independent architectural choices:
+Lesson 15 closes the first major phase of the project: understanding the core mechanics of a decoder-only language model and its attention/inference variants.
+
+After that, the repository moves into a second phase:
 
 ```text
-H_KV = H_Q  → MHA
-1 < H_KV < H_Q → GQA
-H_KV = 1 → MQA
+RL foundations
+    ↓
+policy gradients
+    ↓
+actor-critic + GAE
+    ↓
+PPO
+    ↓
+SFT
+    ↓
+preference / reward modeling
+    ↓
+RLHF
+    ↓
+DPO and modern LLM post-training
 ```
 
-The verified `GroupedQueryAttention` implementation keeps the persistent KV
-cache compact with shape
+The reusable attention implementation already treats the number of query heads and key/value heads as independent architectural choices:
+
+```text
+H_KV = H_Q       → MHA
+1 < H_KV < H_Q   → GQA
+H_KV = 1         → MQA
+```
+
+The verified `GroupedQueryAttention` implementation keeps the persistent KV cache compact with shape
 
 ```text
 (B, H_KV, T, D)
@@ -391,11 +434,12 @@ cache compact with shape
 
 and expands KV heads only for the educational attention computation.
 
-`GPTConfig` now exposes both `num_query_heads` and `num_kv_heads`, so the
-same decoder-only model can be configured as MHA, GQA, or MQA.
+`GPTConfig` exposes both `num_query_heads` and `num_kv_heads`, so the same decoder-only model can be configured as MHA, GQA, or MQA.
 
-The next lesson asks a different question:
+The current question is:
 
 > Can attention avoid explicitly constructing a full T × T attention matrix?
 
-That leads to linear attention.
+That leads to linear attention. The next major question after that is:
+
+> How do we turn a pretrained language model into a model that learns from actions, preferences, and human feedback?
