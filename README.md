@@ -134,7 +134,23 @@ Abstraction should follow understanding, not hide what has not yet been understo
 
 `lessons/` contains verbose educational notebooks with derivations, intermediate tensors, sanity checks, and reference comparisons.
 
-A future `src/` package will contain cleaner reusable implementations after the underlying mechanisms are understood.
+The `src/llmfp/` package contains cleaner reusable implementations extracted only after the underlying mechanisms have been derived and verified in the lessons.
+
+The extraction rule is:
+
+```text
+understand
+    ↓
+implement explicitly
+    ↓
+verify
+    ↓
+extract into src/
+    ↓
+reuse in later lessons
+```
+
+This keeps later notebooks focused on the new idea rather than repeatedly copying already-understood mechanisms.
 
 ### 8. Use AI as a teacher, not as an autocomplete engine
 
@@ -283,9 +299,17 @@ llm-from-first-principles/
 │   ├── 11_positional_information.ipynb
 │   └── 12_transformer_blocks_and_gpt.ipynb
 │
-├── src/                 # reusable implementations will grow here later
+├── src/
+│   └── llmfp/
+│       ├── nn/
+│       │   ├── rope.py
+│       │   └── mlp.py
+│       └── utils/
+│           └── inspection.py
+│
 ├── data/                # large/generated datasets are not committed
 ├── checkpoints/         # ignored
+├── TORCH_FUNCTIONS.md   # PyTorch API learning tracker
 ├── pyproject.toml
 ├── uv.lock
 └── README.md
