@@ -370,7 +370,7 @@ wheels = [
 [[package]]
 name = "llm-from-first-principles"
 version = "0.1.0"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
     { name = "einops" },
     { name = "matplotlib" },
