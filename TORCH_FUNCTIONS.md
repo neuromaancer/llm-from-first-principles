@@ -31,7 +31,7 @@ A function can move from **Introduced** to **Understood** once its behavior has 
 | `torch.zeros_like` | ✅ | Creates zeros with the same shape, dtype, and device as another tensor. |
 | `torch.ones` | ✅ | Creates a tensor filled with ones. |
 | `torch.ones_like` | ✅ | Creates ones with the same shape, dtype, and device as another tensor. |
-| `torch.full_like` | 🟡 | Creates a tensor with the same shape, dtype, and device as another tensor, filled with a chosen value. |
+| `torch.full_like` | ✅ | Creates a tensor with the same shape, dtype, and device as another tensor, filled with a chosen value. |
 | `torch.randn` | ✅ | Samples values from a standard normal distribution. |
 | `torch.randint` | ✅ | Samples integer values from a specified range. |
 | `Tensor.reshape` | ✅ | Changes tensor shape without changing the logical values. |
@@ -53,7 +53,7 @@ A function can move from **Introduced** to **Understood** once its behavior has 
 | `Tensor.mean` | ✅ | Computes a mean over selected dimensions. |
 | `Tensor.var` | ✅ | Computes variance over selected dimensions. |
 | `Tensor.sum` | ✅ | Computes a sum over selected dimensions. |
-| `torch.cumsum` | 🟡 | Computes cumulative sums along a dimension. |
+| `torch.cumsum` | ✅ | Computes cumulative sums along a dimension. |
 | `torch.linalg.vector_norm` | ✅ | Computes vector norms along a selected dimension. |
 | `torch.isfinite` | ✅ | Checks whether values are finite rather than NaN or infinity. |
 
@@ -64,10 +64,11 @@ A function can move from **Introduced** to **Understood** once its behavior has 
 | `torch.maximum` | ✅ | Computes the element-wise maximum. |
 | `torch.where` | ✅ | Selects values element-wise according to a Boolean condition. |
 | `Tensor.masked_fill` | ✅ | Replaces values where a Boolean mask is true. |
-| `torch.topk` | 🟡 | Returns the largest or smallest k values and their original indices. |
-| `torch.sort` | 🟡 | Sorts values and returns both sorted values and their original indices. |
-| `Tensor.scatter_` | 🟡 | Writes source values into selected destination indices in-place. |
+| `torch.topk` | ✅ | Returns the largest or smallest k values and their original indices. |
+| `torch.sort` | ✅ | Sorts values and returns both sorted values and their original indices. |
+| `Tensor.scatter_` | ✅ | Writes source values into selected destination indices in-place. |
 | `torch.allclose` | ✅ | Checks approximate numerical equality between tensors. |
+| `torch.equal` | ✅ | Checks whether two tensors have the same shape and exactly equal elements. |
 
 ## Probability and sampling
 
@@ -75,7 +76,7 @@ A function can move from **Introduced** to **Understood** once its behavior has 
 |---|---|---|
 | `torch.softmax` / `F.softmax` | ✅ | Converts logits into a normalized probability distribution. |
 | `F.cross_entropy` | ✅ | Computes cross-entropy loss from logits and class targets. |
-| `torch.multinomial` | 🟡 | Samples indices according to categorical weights or probabilities. |
+| `torch.multinomial` | ✅ | Samples indices according to categorical weights or probabilities. |
 | `torch.argmax` | ✅ | Returns the index of the largest value. |
 
 ## Autograd and parameter handling
@@ -111,5 +112,6 @@ The following functions were introduced or revisited during autoregressive sampl
 - `torch.cumsum`
 - `torch.full_like`
 - `Tensor.scatter_`
+- `torch.equal`
 
 These functions should be understood before the generation notebook moves on to KV caching.
