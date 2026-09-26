@@ -41,6 +41,7 @@ A function can move from **Introduced** to **Understood** once its behavior has 
 | `Tensor.flatten` | ✅ | Collapses a range of dimensions into one. |
 | `torch.stack` | ✅ | Creates a new dimension and stacks tensors along it. |
 | `torch.cat` | ✅ | Concatenates tensors along an existing dimension. |
+| `torch.repeat_interleave` | 🟡 | Repeats tensor entries a fixed number of times along a selected dimension. |
 
 ## Numerical and reduction operations
 
@@ -115,3 +116,8 @@ The following functions were introduced or revisited during autoregressive sampl
 - `torch.equal`
 
 These functions should be understood before the generation notebook moves on to KV caching.
+
+
+## Lesson 14 — GQA additions
+
+- `torch.repeat_interleave` — introduced after first implementing KV-head expansion manually.
