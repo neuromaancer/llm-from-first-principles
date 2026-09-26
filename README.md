@@ -57,7 +57,7 @@ The notebooks are intended to be read in order.
 | [12](lessons/12_transformer_blocks_and_gpt.ipynb) | Transformer Blocks and GPT | ✅ Complete |
 | [13](lessons/13_generation_and_kv_cache.ipynb) | Generation and KV Cache | ✅ Complete |
 | [14](lessons/14_multi_query_and_grouped_query_attention.ipynb) | Multi-Query and Grouped-Query Attention | ✅ Complete |
-| 15 | Linear Attention | 🚧 Next |
+| 15 | Linear Attention | 🚧 In Progress |
 
 ---
 
@@ -367,7 +367,7 @@ The Git history is part of the learning record: small commits make it possible t
 
 Lessons **00–14** are complete.
 
-Next:
+Currently working on:
 
 ```text
 15_linear_attention.ipynb
