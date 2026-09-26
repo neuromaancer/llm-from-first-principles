@@ -56,8 +56,8 @@ The notebooks are intended to be read in order.
 | [11](lessons/11_positional_information.ipynb) | Positional Information | ✅ Complete |
 | [12](lessons/12_transformer_blocks_and_gpt.ipynb) | Transformer Blocks and GPT | ✅ Complete |
 | [13](lessons/13_generation_and_kv_cache.ipynb) | Generation and KV Cache | ✅ Complete |
-| 14 | Multi-Query and Grouped-Query Attention | 🚧 In Progress |
-| 15 | Linear Attention | Planned |
+| [14](lessons/14_multi_query_and_grouped_query_attention.ipynb) | Multi-Query and Grouped-Query Attention | ✅ Complete |
+| 15 | Linear Attention | 🚧 Next |
 
 ---
 
@@ -298,7 +298,8 @@ llm-from-first-principles/
 │   ├── 10_normalization_and_feed_forward.ipynb
 │   ├── 11_positional_information.ipynb
 │   ├── 12_transformer_blocks_and_gpt.ipynb
-│   └── 13_generation_and_kv_cache.ipynb
+│   ├── 13_generation_and_kv_cache.ipynb
+│   └── 14_multi_query_and_grouped_query_attention.ipynb
 │
 ├── src/
 │   └── llmfp/
@@ -364,38 +365,37 @@ The Git history is part of the learning record: small commits make it possible t
 
 ## Current status
 
-Lessons **00–13** are complete.
+Lessons **00–14** are complete.
 
-Currently working on:
-
-```text
-14_multi_query_and_grouped_query_attention.ipynb
-```
-
-The reusable `src/llmfp/` package now contains the verified decoder-only
-Transformer with RoPE-aware causal attention and optional KV caching.
-
-Lesson 13 established the inference path:
+Next:
 
 ```text
-prompt
-    ↓
-prefill
-    ↓
-per-layer KV cache
-    ↓
-one-token decode
-    ↓
-append new K/V
-    ↓
-repeat
+15_linear_attention.ipynb
 ```
 
-Cached decoding reproduces full-sequence logits up to floating-point error
-while avoiding repeated projection of historical tokens.
+The reusable attention implementation now treats the number of query heads and
+key/value heads as independent architectural choices:
 
-The next question follows directly from KV-cache memory cost:
+```text
+H_KV = H_Q  → MHA
+1 < H_KV < H_Q → GQA
+H_KV = 1 → MQA
+```
 
-> Do all query heads need their own key and value heads?
+The verified `GroupedQueryAttention` implementation keeps the persistent KV
+cache compact with shape
 
-That leads to Multi-Query Attention (MQA) and Grouped-Query Attention (GQA).
+```text
+(B, H_KV, T, D)
+```
+
+and expands KV heads only for the educational attention computation.
+
+`GPTConfig` now exposes both `num_query_heads` and `num_kv_heads`, so the
+same decoder-only model can be configured as MHA, GQA, or MQA.
+
+The next lesson asks a different question:
+
+> Can attention avoid explicitly constructing a full T × T attention matrix?
+
+That leads to linear attention.
