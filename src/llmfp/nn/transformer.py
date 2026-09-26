@@ -3,7 +3,7 @@
 import torch
 import torch.nn as nn
 
-from .attention import CausalSelfAttention
+from .attention import GroupedQueryAttention
 
 
 class TransformerBlock(nn.Module):
@@ -11,14 +11,14 @@ class TransformerBlock(nn.Module):
 
     Args:
         embedding_dim: Width of the residual stream.
-        attention: Causal self-attention module.
+        attention: Grouped-query causal self-attention module.
         feed_forward: Token-wise feed-forward module.
     """
 
     def __init__(
         self,
         embedding_dim: int,
-        attention: CausalSelfAttention,
+        attention: GroupedQueryAttention,
         feed_forward: nn.Module,
     ) -> None:
         super().__init__()
