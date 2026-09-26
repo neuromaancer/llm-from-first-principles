@@ -55,8 +55,8 @@ The notebooks are intended to be read in order.
 | [10](lessons/10_normalization_and_feed_forward.ipynb) | Normalization and Feed-Forward Networks | ✅ Complete |
 | [11](lessons/11_positional_information.ipynb) | Positional Information | ✅ Complete |
 | [12](lessons/12_transformer_blocks_and_gpt.ipynb) | Transformer Blocks and GPT | ✅ Complete |
-| 13 | Generation and KV Cache | 🚧 In Progress |
-| 14 | Multi-Query and Grouped-Query Attention | Planned |
+| [13](lessons/13_generation_and_kv_cache.ipynb) | Generation and KV Cache | ✅ Complete |
+| 14 | Multi-Query and Grouped-Query Attention | 🚧 Next |
 | 15 | Linear Attention | Planned |
 
 ---
@@ -297,13 +297,20 @@ llm-from-first-principles/
 │   ├── 09_multi_head_attention.ipynb
 │   ├── 10_normalization_and_feed_forward.ipynb
 │   ├── 11_positional_information.ipynb
-│   └── 12_transformer_blocks_and_gpt.ipynb
+│   ├── 12_transformer_blocks_and_gpt.ipynb
+│   └── 13_generation_and_kv_cache.ipynb
 │
 ├── src/
 │   └── llmfp/
 │       ├── nn/
+│       │   ├── attention.py
+│       │   ├── mlp.py
 │       │   ├── rope.py
-│       │   └── mlp.py
+│       │   └── transformer.py
+│       ├── models/
+│       │   └── gpt.py
+│       ├── generation/
+│       │   └── cache.py
 │       └── utils/
 │           └── inspection.py
 │
@@ -357,33 +364,38 @@ The Git history is part of the learning record: small commits make it possible t
 
 ## Current status
 
-Lessons **00–12** are complete.
+Lessons **00–13** are complete.
 
-Currently working on:
-
-```text
-13_generation_and_kv_cache.ipynb
-```
-
-The model is now a complete trainable decoder-only Transformer:
+Next:
 
 ```text
-token IDs
-    ↓
-Token Embedding
-    ↓
-Transformer Block × N
-    ↓
-Final RMSNorm
-    ↓
-LM Head
-    ↓
-logits
+14_multi_query_and_grouped_query_attention.ipynb
 ```
 
-The next step moves from full-sequence training to autoregressive inference:
+The reusable `src/llmfp/` package now contains the verified decoder-only
+Transformer with RoPE-aware causal attention and optional KV caching.
 
-- generate one token at a time,
-- control sampling with temperature, top-k, and top-p,
-- understand why naive generation repeatedly recomputes old keys and values,
-- and implement a KV cache for efficient decoding.
+Lesson 13 established the inference path:
+
+```text
+prompt
+    ↓
+prefill
+    ↓
+per-layer KV cache
+    ↓
+one-token decode
+    ↓
+append new K/V
+    ↓
+repeat
+```
+
+Cached decoding reproduces full-sequence logits up to floating-point error
+while avoiding repeated projection of historical tokens.
+
+The next question follows directly from KV-cache memory cost:
+
+> Do all query heads need their own key and value heads?
+
+That leads to Multi-Query Attention (MQA) and Grouped-Query Attention (GQA).
