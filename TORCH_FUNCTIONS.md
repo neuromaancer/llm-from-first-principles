@@ -98,6 +98,7 @@ A function can move from **Introduced** to **Understood** once its behavior has 
 | `nn.Parameter` | ✅ | Registers a tensor as a trainable model parameter. |
 | `nn.ModuleList` | ✅ | Stores and registers a list of child modules. |
 | `nn.RMSNorm` | ✅ | Applies RMS normalization over the final feature dimension. |
+| `F.elu` | ✅ | Applies the ELU activation; used after deriving ELU(x) + 1 manually for the positive linear-attention feature map. |
 | `F.gelu` | ✅ | Applies the GELU activation. |
 | `F.silu` | ✅ | Applies the SiLU / Swish activation. |
 | `F.scaled_dot_product_attention` | ✅ | Computes scaled dot-product attention using an optimized PyTorch primitive. |
@@ -121,3 +122,9 @@ These functions should be understood before the generation notebook moves on to 
 ## Lesson 14 — GQA additions
 
 - `torch.repeat_interleave` — introduced after first implementing KV-head expansion manually.
+
+
+## Lesson 15 — Linear-attention additions
+
+- `F.elu` — used in reusable source only after the notebook derived the positive feature map manually.
+- `torch.cumsum` — reused to construct causal prefix states for parallel linear attention.
