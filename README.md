@@ -359,6 +359,8 @@ llm-from-first-principles/
 │   └── llmfp/
 │       ├── nn/
 │       │   ├── attention.py
+│       │   ├── fast_weights.py
+│       │   ├── linear_attention.py
 │       │   ├── mlp.py
 │       │   ├── rope.py
 │       │   └── transformer.py
@@ -455,6 +457,23 @@ FlashAttention
 kernelized / recurrent linear attention
 → change the attention and historical-state representation
 ```
+
+
+The reusable source package now also keeps the verified Lesson 15 building blocks available for later experiments:
+
+```text
+src/llmfp/nn/linear_attention.py
+├── positive_feature_map
+├── LinearAttentionState
+└── CausalLinearAttention
+
+src/llmfp/nn/fast_weights.py
+├── read_fast_weight_memory
+├── additive_memory_update
+└── delta_memory_update
+```
+
+`CausalLinearAttention` supports both full-sequence causal prefix computation and recurrent state reuse. It is intentionally kept separate from the main `GPT` configuration for now: the pretraining baseline in Lesson 16 will continue to use the already-verified softmax/GQA path, while linear attention remains available as an explicit architecture experiment.
 
 The next lesson is an integration milestone rather than another architectural variant:
 
