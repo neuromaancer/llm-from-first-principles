@@ -364,12 +364,20 @@ llm-from-first-principles/
 │       │   ├── mlp.py
 │       │   ├── rope.py
 │       │   └── transformer.py
+│       ├── data/
+│       │   ├── batching.py
+│       │   └── tokenization.py
 │       ├── models/
 │       │   └── gpt.py
 │       ├── generation/
-│       │   └── cache.py
+│       │   ├── cache.py
+│       │   ├── generate.py
+│       │   └── sampling.py
+│       ├── training/
+│       │   └── schedules.py
 │       └── utils/
-│           └── inspection.py
+│           ├── inspection.py
+│           └── metrics.py
 │
 ├── data/                # large/generated datasets are not committed
 ├── checkpoints/         # ignored
@@ -474,6 +482,30 @@ src/llmfp/nn/fast_weights.py
 ```
 
 `CausalLinearAttention` supports both full-sequence causal prefix computation and recurrent state reuse. It is intentionally kept separate from the main `GPT` configuration for now: the pretraining baseline in Lesson 16 will continue to use the already-verified softmax/GQA path, while linear attention remains available as an explicit architecture experiment.
+
+Reusable helpers extracted from earlier lessons now also cover the parts of the training pipeline that recur across experiments:
+
+```text
+data/
+├── CharacterTokenizer
+├── split_token_stream
+├── get_batch
+└── tokens_per_step
+
+generation/
+├── top-k / top-p filters
+├── next-token sampling
+├── greedy generation
+└── cached greedy / sampled generation
+
+training/
+└── linear warmup + cosine decay
+
+utils/
+└── perplexity_from_loss
+```
+
+These helpers were extracted only after their underlying mechanisms had already been implemented and studied explicitly in earlier notebooks.
 
 The next lesson is an integration milestone rather than another architectural variant:
 
