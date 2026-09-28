@@ -65,7 +65,7 @@ The notebooks are intended to be read in order. The roadmap is organized into fo
 
 | Lesson | Topic | Status |
 |---|---|---|
-| 16 | Pretraining a Tiny GPT End to End | 🚧 In Progress |
+| [16](lessons/16_pretraining_a_tiny_gpt.ipynb) | Pretraining a Tiny GPT End to End | ✅ Complete |
 
 This lesson is the integration point for Part I. It connects raw text, tokenization, batching, the decoder-only model, cross-entropy, AdamW, learning-rate scheduling, validation, checkpoints, perplexity, and generation in one real training run.
 
@@ -73,7 +73,7 @@ This lesson is the integration point for Part I. It connects raw text, tokenizat
 
 | Lesson | Topic | Status |
 |---|---|---|
-| 17 | RL Foundations: Trajectories, Return, Value, Q, Advantage, Bellman Equations | Planned |
+| 17 | RL Foundations: Trajectories, Return, Value, Q, Advantage, Bellman Equations | 🚧 Next |
 | 18 | Policy Gradients and REINFORCE from Scratch | Planned |
 | 19 | Actor-Critic, TD Learning, and GAE | Planned |
 | 20 | PPO from Scratch | Planned |
@@ -374,7 +374,10 @@ llm-from-first-principles/
 │       │   ├── generate.py
 │       │   └── sampling.py
 │       ├── training/
-│       │   └── schedules.py
+│       │   ├── checkpoint.py
+│       │   ├── evaluation.py
+│       │   ├── schedules.py
+│       │   └── steps.py
 │       └── utils/
 │           ├── inspection.py
 │           └── metrics.py
@@ -429,61 +432,43 @@ The Git history is part of the learning record: small commits make it possible t
 
 ## Current status
 
-Lessons **00–15** are complete.
+Lessons **00–16** are complete.
 
-Part I — **Language Models from First Principles** — is now complete.
+Part II — **Pretraining a Tiny GPT** — is now complete.
 
-Currently working on:
-
-```text
-16_pretraining_a_tiny_gpt.ipynb
-```
-
-Lesson 15 closed the architecture-focused phase by connecting several views of sequence modeling:
+Next:
 
 ```text
-pairwise attention
-    ↓
-kernel feature maps
-    ↓
-associative reordering
-    ↓
-causal prefix states
-    ↓
-recurrent fast-weight memory
+17_rl_foundations.ipynb
 ```
 
-The lesson also separated three different optimization axes:
+Lesson 16 connected the previously isolated components into one real pretraining experiment:
 
 ```text
-GQA / MQA
-→ reduce KV-head width
-
-FlashAttention
-→ execute exact softmax attention more efficiently
-
-kernelized / recurrent linear attention
-→ change the attention and historical-state representation
+raw text
+    ↓
+character tokenizer
+    ↓
+contiguous train / validation split
+    ↓
+random next-token batches
+    ↓
+GPT with GQA + RoPE + SwiGLU
+    ↓
+cross-entropy
+    ↓
+AdamW + warmup / cosine schedule
+    ↓
+validation + perplexity
+    ↓
+checkpoint selection
+    ↓
+autoregressive generation
 ```
 
+The experiment showed both successful learning and overfitting: training loss continued to decrease while validation loss eventually plateaued and worsened. Generated samples learned Shakespeare-like spelling patterns, dialogue formatting, punctuation, local syntax, and partial semantics from next-token prediction alone.
 
-The reusable source package now also keeps the verified Lesson 15 building blocks available for later experiments:
-
-```text
-src/llmfp/nn/linear_attention.py
-├── positive_feature_map
-├── LinearAttentionState
-└── CausalLinearAttention
-
-src/llmfp/nn/fast_weights.py
-├── read_fast_weight_memory
-├── additive_memory_update
-└── delta_memory_update
-```
-
-`CausalLinearAttention` supports both full-sequence causal prefix computation and recurrent state reuse. It is intentionally kept separate from the main `GPT` configuration for now: the pretraining baseline in Lesson 16 will continue to use the already-verified softmax/GQA path, while linear attention remains available as an explicit architecture experiment.
-
-Reusable helpers extracted from earlier lessons now also cover the parts of the training pipeline that recur across experiments:
+Reusable pretraining infrastructure now lives under `src/llmfp/`:
 
 ```text
 data/
@@ -492,45 +477,40 @@ data/
 ├── get_batch
 └── tokens_per_step
 
+training/
+├── language_model_training_step
+├── estimate_language_model_loss
+├── warmup_cosine_learning_rate
+├── save_training_checkpoint
+└── load_training_checkpoint
+
 generation/
-├── top-k / top-p filters
+├── top-k / top-p filtering
 ├── next-token sampling
 ├── greedy generation
 └── cached greedy / sampled generation
-
-training/
-└── linear warmup + cosine decay
-
-utils/
-└── perplexity_from_loss
 ```
 
-These helpers were extracted only after their underlying mechanisms had already been implemented and studied explicitly in earlier notebooks.
+The next phase changes the learning signal itself.
 
-The next lesson is an integration milestone rather than another architectural variant:
-
-> Can all of the components learned so far train a real tiny language model from raw text to generated samples?
-
-Lesson 16 will connect tokenization, batching, the reusable GPT model, cross-entropy, AdamW, learning-rate scheduling, gradient clipping, validation, checkpoints, perplexity, and generation in one end-to-end pretraining run.
-
-After that, the project moves into reinforcement learning and LLM post-training:
+Language-model pretraining has an explicit target token at every position:
 
 ```text
-RL foundations
-    ↓
-policy gradients / REINFORCE
-    ↓
-actor-critic + GAE
-    ↓
-PPO
-    ↓
-SFT
-    ↓
-sequence log-probabilities + preference / reward modeling
-    ↓
-RLHF + KL regularization
-    ↓
-DPO
-    ↓
-modern LLM RL / preference optimization
+context → correct next token
 ```
+
+Reinforcement learning instead begins from actions and scalar feedback:
+
+```text
+state
+    ↓
+action
+    ↓
+environment / outcome
+    ↓
+reward
+```
+
+The central question for Lesson 17 is:
+
+> If there is no differentiable correct-action target, how can reward change the probability of the actions that produced it?
