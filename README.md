@@ -73,7 +73,7 @@ This lesson is the integration point for Part I. It connects raw text, tokenizat
 
 | Lesson | Topic | Status |
 |---|---|---|
-| 17 | RL Foundations: Trajectories, Return, Value, Q, Advantage, Bellman Equations | 🚧 Next |
+| 17 | RL Foundations: Trajectories, Return, Value, Q, Advantage, Bellman Equations | 🚧 In Progress |
 | 18 | Policy Gradients and REINFORCE from Scratch | Planned |
 | 19 | Actor-Critic, TD Learning, and GAE | Planned |
 | 20 | PPO from Scratch | Planned |
@@ -436,7 +436,7 @@ Lessons **00–16** are complete.
 
 Part II — **Pretraining a Tiny GPT** — is now complete.
 
-Next:
+Currently working on:
 
 ```text
 17_rl_foundations.ipynb
