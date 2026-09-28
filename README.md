@@ -59,7 +59,7 @@ The notebooks are intended to be read in order. The roadmap is organized into fo
 | [12](lessons/12_transformer_blocks_and_gpt.ipynb) | Transformer Blocks and GPT | ✅ Complete |
 | [13](lessons/13_generation_and_kv_cache.ipynb) | Generation and KV Cache | ✅ Complete |
 | [14](lessons/14_multi_query_and_grouped_query_attention.ipynb) | Multi-Query and Grouped-Query Attention | ✅ Complete |
-| 15 | Linear Attention | 🚧 In Progress |
+| [15](lessons/15_linear_attention.ipynb) | Linear Attention | ✅ Complete |
 
 ### Part II — Pretraining a Tiny GPT
 
@@ -352,7 +352,8 @@ llm-from-first-principles/
 │   ├── 11_positional_information.ipynb
 │   ├── 12_transformer_blocks_and_gpt.ipynb
 │   ├── 13_generation_and_kv_cache.ipynb
-│   └── 14_multi_query_and_grouped_query_attention.ipynb
+│   ├── 14_multi_query_and_grouped_query_attention.ipynb
+│   └── 15_linear_attention.ipynb
 │
 ├── src/
 │   └── llmfp/
@@ -418,25 +419,52 @@ The Git history is part of the learning record: small commits make it possible t
 
 ## Current status
 
-Lessons **00–14** are complete.
+Lessons **00–15** are complete.
 
-Currently working on:
+Part I — **Language Models from First Principles** — is now complete.
+
+Next:
 
 ```text
-15_linear_attention.ipynb
+16_pretraining_a_tiny_gpt.ipynb
 ```
 
-Lesson 15 closes the architecture-focused portion of the first phase. The next step is not RL immediately: Lesson 16 will first integrate the pieces learned so far into a real tiny-GPT pretraining run.
-
-The roadmap from there is:
+Lesson 15 closed the architecture-focused phase by connecting several views of sequence modeling:
 
 ```text
-core LM mechanisms
+pairwise attention
     ↓
-linear attention
+kernel feature maps
     ↓
-pretrain a tiny GPT end to end
+associative reordering
     ↓
+causal prefix states
+    ↓
+recurrent fast-weight memory
+```
+
+The lesson also separated three different optimization axes:
+
+```text
+GQA / MQA
+→ reduce KV-head width
+
+FlashAttention
+→ execute exact softmax attention more efficiently
+
+kernelized / recurrent linear attention
+→ change the attention and historical-state representation
+```
+
+The next lesson is an integration milestone rather than another architectural variant:
+
+> Can all of the components learned so far train a real tiny language model from raw text to generated samples?
+
+Lesson 16 will connect tokenization, batching, the reusable GPT model, cross-entropy, AdamW, learning-rate scheduling, gradient clipping, validation, checkpoints, perplexity, and generation in one end-to-end pretraining run.
+
+After that, the project moves into reinforcement learning and LLM post-training:
+
+```text
 RL foundations
     ↓
 policy gradients / REINFORCE
@@ -455,33 +483,3 @@ DPO
     ↓
 modern LLM RL / preference optimization
 ```
-
-The reusable attention implementation already treats the number of query heads and key/value heads as independent architectural choices:
-
-```text
-H_KV = H_Q       → MHA
-1 < H_KV < H_Q   → GQA
-H_KV = 1         → MQA
-```
-
-The verified `GroupedQueryAttention` implementation keeps the persistent KV cache compact with shape
-
-```text
-(B, H_KV, T, D)
-```
-
-and expands KV heads only for the educational attention computation.
-
-`GPTConfig` exposes both `num_query_heads` and `num_kv_heads`, so the same decoder-only model can be configured as MHA, GQA, or MQA.
-
-The current question is:
-
-> Can attention avoid explicitly constructing a full T × T attention matrix?
-
-That leads to linear attention.
-
-The next integration question will be:
-
-> Can all of the components learned so far train a real tiny language model from raw text to generated samples?
-
-Only after that do we move from language modeling into reinforcement learning and post-training.
