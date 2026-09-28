@@ -65,7 +65,7 @@ The notebooks are intended to be read in order. The roadmap is organized into fo
 
 | Lesson | Topic | Status |
 |---|---|---|
-| 16 | Pretraining a Tiny GPT End to End | Planned |
+| 16 | Pretraining a Tiny GPT End to End | 🚧 In Progress |
 
 This lesson is the integration point for Part I. It connects raw text, tokenization, batching, the decoder-only model, cross-entropy, AdamW, learning-rate scheduling, validation, checkpoints, perplexity, and generation in one real training run.
 
@@ -425,7 +425,7 @@ Lessons **00–15** are complete.
 
 Part I — **Language Models from First Principles** — is now complete.
 
-Next:
+Currently working on:
 
 ```text
 16_pretraining_a_tiny_gpt.ipynb
