@@ -73,7 +73,7 @@ This lesson is the integration point for Part I. It connects raw text, tokenizat
 
 | Lesson | Topic | Status |
 |---|---|---|
-| 17 | Mixture of Experts (MoE) from First Principles | 🚧 In Progress |
+| [17](lessons/17_mixture_of_experts.ipynb) | Mixture of Experts (MoE) from First Principles | ✅ Complete |
 
 This lesson starts from the dense SwiGLU feed-forward network already used by the GPT baseline and asks whether every token must use the same feed-forward parameters. It introduces expert networks, learned routers, top-k routing, token dispatch/gather, expert utilization, load balancing, capacity constraints, and the distinction between total and active parameters.
 
@@ -81,7 +81,7 @@ This lesson starts from the dense SwiGLU feed-forward network already used by th
 
 | Lesson | Topic | Status |
 |---|---|---|
-| 18 | RL Foundations: Trajectories, Return, Value, Q, Advantage, Bellman Equations | Planned |
+| 18 | RL Foundations: Trajectories, Return, Value, Q, Advantage, Bellman Equations | 🚧 In Progress |
 | 19 | Policy Gradients and REINFORCE from Scratch | Planned |
 | 20 | Actor-Critic, TD Learning, and GAE | Planned |
 | 21 | PPO from Scratch | Planned |
@@ -453,49 +453,17 @@ The Git history is part of the learning record: small commits make it possible t
 
 ## Current status
 
-Lessons **00–16** are complete.
+Lessons **00–17** are complete.
 
 Currently working on:
 
 ```text
-17_mixture_of_experts.ipynb
+18_rl_foundations.ipynb
 ```
 
-Lesson 17 extends the dense Transformer along a different axis from attention.
+Lesson 17 introduced learned conditional computation through sparse Mixture of Experts. Starting from the dense SwiGLU path, it developed token-level routing, top-k expert selection, dispatch/gather, router gradients, load balancing, capacity constraints, and the distinction between total and active parameters.
 
-The dense baseline uses the same SwiGLU feed-forward network for every token:
-
-```text
-token representation
-    ↓
-one shared FFN
-    ↓
-updated representation
-```
-
-Mixture of Experts introduces conditional computation:
-
-```text
-token representation
-    ↓
-router
-    ↓
-top-k experts
-    ↓
-selected expert FFNs
-    ↓
-weighted combination
-```
-
-The central questions are:
-
-> Why can a model have many more total parameters without activating all of them for every token?
-
-and
-
-> What new optimization and systems problems appear once different tokens are routed to different parameter subsets?
-
-The verified reusable MoE building blocks now live in:
+Reusable MoE components live in:
 
 ```text
 src/llmfp/nn/moe.py
@@ -505,26 +473,22 @@ src/llmfp/nn/moe.py
 └── expert_capacity
 ```
 
-The reusable implementation intentionally keeps routing and dispatch explicit rather than highly optimized, so the relationship between token assignments, expert computation, and auxiliary balancing remains inspectable.
-
-After MoE, the project moves into reinforcement learning:
+Lesson 18 begins the reinforcement-learning section from first principles. The goal is to understand the objects that later policy-gradient and PPO methods manipulate before introducing any policy-gradient estimator:
 
 ```text
-RL foundations
+state + action
     ↓
-policy gradients / REINFORCE
+transition + reward
     ↓
-actor-critic + GAE
+trajectory
     ↓
-PPO
+return
     ↓
-SFT
+V(s), Q(s,a), advantage
     ↓
-sequence log-probabilities + preference / reward modeling
+Bellman relationships
     ↓
-RLHF + KL regularization
-    ↓
-DPO
-    ↓
-modern LLM RL / preference optimization
+Monte Carlo estimation
 ```
+
+Only after these quantities are clear will the project move to policy gradients and REINFORCE.
