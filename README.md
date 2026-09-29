@@ -382,6 +382,7 @@ llm-from-first-principles/
 │       │   ├── fast_weights.py
 │       │   ├── linear_attention.py
 │       │   ├── mlp.py
+│       │   ├── moe.py
 │       │   ├── rope.py
 │       │   └── transformer.py
 │       ├── data/
@@ -493,6 +494,18 @@ The central questions are:
 and
 
 > What new optimization and systems problems appear once different tokens are routed to different parameter subsets?
+
+The verified reusable MoE building blocks now live in:
+
+```text
+src/llmfp/nn/moe.py
+├── SparseMoE
+├── expert_utilization
+├── load_balancing_loss
+└── expert_capacity
+```
+
+The reusable implementation intentionally keeps routing and dispatch explicit rather than highly optimized, so the relationship between token assignments, expert computation, and auxiliary balancing remains inspectable.
 
 After MoE, the project moves into reinforcement learning:
 
