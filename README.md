@@ -371,7 +371,9 @@ llm-from-first-principles/
 │   ├── 12_transformer_blocks_and_gpt.ipynb
 │   ├── 13_generation_and_kv_cache.ipynb
 │   ├── 14_multi_query_and_grouped_query_attention.ipynb
-│   └── 15_linear_attention.ipynb
+│   ├── 15_linear_attention.ipynb
+│   ├── 16_pretraining_a_tiny_gpt.ipynb
+│   └── 17_mixture_of_experts.ipynb
 │
 ├── src/
 │   └── llmfp/
