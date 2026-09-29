@@ -183,6 +183,10 @@ class SparseMoE(nn.Module):
         top_k: Number of experts selected per token.
         capacity_factor: Optional expert-capacity multiplier. When omitted,
             every requested route is accepted.
+        renormalize_selected_weights: Whether selected routing probabilities
+            are renormalized to sum to one. With top-1 routing, renormalizing
+            makes the single selected weight exactly one, so the task loss
+            does not train the router through that output gate.
     """
 
     def __init__(
@@ -192,6 +196,7 @@ class SparseMoE(nn.Module):
         num_experts: int,
         top_k: int,
         capacity_factor: float | None = None,
+        renormalize_selected_weights: bool = True,
     ) -> None:
         super().__init__()
 
@@ -228,6 +233,7 @@ class SparseMoE(nn.Module):
         self.num_experts = num_experts
         self.top_k = top_k
         self.capacity_factor = capacity_factor
+        self.renormalize_selected_weights = renormalize_selected_weights
 
         self.router = nn.Linear(
             embedding_dim,
@@ -317,13 +323,19 @@ class SparseMoE(nn.Module):
             dim=-1,
         )
 
-        topk_weights: torch.Tensor = (
-            topk_probabilities
-            / topk_probabilities.sum(
-                dim=-1,
-                keepdim=True,
+        if self.renormalize_selected_weights:
+            topk_weights: torch.Tensor = (
+                topk_probabilities
+                / topk_probabilities.sum(
+                    dim=-1,
+                    keepdim=True,
+                )
             )
-        )
+        else:
+            # Keeping the raw selected probabilities preserves the router's
+            # absolute confidence. This is especially important for top-1
+            # routing, where renormalization would make every gate equal 1.
+            topk_weights = topk_probabilities
 
         balance_loss: torch.Tensor = load_balancing_loss(
             router_probabilities,
