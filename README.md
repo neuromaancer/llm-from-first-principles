@@ -38,7 +38,7 @@ The point is not to reinvent PyTorch forever. The point is to understand what Py
 
 ## Lessons
 
-The notebooks are intended to be read in order. The roadmap is organized into four stages: first understand the language model itself, then pretrain a tiny GPT end to end, then build the reinforcement-learning foundations needed for post-training, and finally study modern LLM post-training objectives.
+The notebooks are intended to be read in order. The roadmap is organized into five stages: first understand the language model itself, then pretrain a tiny GPT end to end, then study sparse conditional computation with Mixture of Experts, then build the reinforcement-learning foundations needed for post-training, and finally study modern LLM post-training objectives.
 
 ### Part I — Language Models from First Principles
 
@@ -69,26 +69,34 @@ The notebooks are intended to be read in order. The roadmap is organized into fo
 
 This lesson is the integration point for Part I. It connects raw text, tokenization, batching, the decoder-only model, cross-entropy, AdamW, learning-rate scheduling, validation, checkpoints, perplexity, and generation in one real training run.
 
-### Part III — Reinforcement Learning from First Principles
+### Part III — Sparse Conditional Computation
 
 | Lesson | Topic | Status |
 |---|---|---|
-| 17 | RL Foundations: Trajectories, Return, Value, Q, Advantage, Bellman Equations | 🚧 In Progress |
-| 18 | Policy Gradients and REINFORCE from Scratch | Planned |
-| 19 | Actor-Critic, TD Learning, and GAE | Planned |
-| 20 | PPO from Scratch | Planned |
+| 17 | Mixture of Experts (MoE) from First Principles | 🚧 In Progress |
+
+This lesson starts from the dense SwiGLU feed-forward network already used by the GPT baseline and asks whether every token must use the same feed-forward parameters. It introduces expert networks, learned routers, top-k routing, token dispatch/gather, expert utilization, load balancing, capacity constraints, and the distinction between total and active parameters.
+
+### Part IV — Reinforcement Learning from First Principles
+
+| Lesson | Topic | Status |
+|---|---|---|
+| 18 | RL Foundations: Trajectories, Return, Value, Q, Advantage, Bellman Equations | Planned |
+| 19 | Policy Gradients and REINFORCE from Scratch | Planned |
+| 20 | Actor-Critic, TD Learning, and GAE | Planned |
+| 21 | PPO from Scratch | Planned |
 
 The RL section is intentionally focused. It does not try to reproduce a complete general-purpose RL curriculum; it develops the concepts needed to understand LLM post-training objectives from first principles.
 
-### Part IV — LLM Post-Training
+### Part V — LLM Post-Training
 
 | Lesson | Topic | Status |
 |---|---|---|
-| 21 | Supervised Fine-Tuning (SFT) | Planned |
-| 22 | Preference Data, Sequence Log-Probabilities, and Reward Modeling | Planned |
-| 23 | RLHF with PPO and KL Regularization | Planned |
-| 24 | Direct Preference Optimization (DPO) | Planned |
-| 25 | Modern LLM RL and Preference Optimization | Planned |
+| 22 | Supervised Fine-Tuning (SFT) | Planned |
+| 23 | Preference Data, Sequence Log-Probabilities, and Reward Modeling | Planned |
+| 24 | RLHF with PPO and KL Regularization | Planned |
+| 25 | Direct Preference Optimization (DPO) | Planned |
+| 26 | Modern LLM RL and Preference Optimization | Planned |
 
 The post-training section will connect token-level language modeling to sequence-level optimization. It will make explicit the roles of completion log-probabilities, reference policies, KL penalties, pairwise preferences, learned rewards, and policy optimization before using higher-level training frameworks.
 
@@ -226,7 +234,17 @@ Part II — End-to-end pretraining
 ├── validation loss and perplexity
 └── generation from the trained model
 
-Part III — Reinforcement-learning foundations
+Part III — Sparse conditional computation
+├── dense FFN → multiple experts
+├── router logits and routing probabilities
+├── top-k expert selection
+├── token dispatch and gather
+├── expert utilization
+├── load balancing
+├── capacity constraints
+└── total vs active parameters
+
+Part IV — Reinforcement-learning foundations
 ├── states, actions, trajectories, and rewards
 ├── returns and discounting
 ├── V(s), Q(s,a), and advantage
@@ -239,7 +257,7 @@ Part III — Reinforcement-learning foundations
 ├── generalized advantage estimation
 └── PPO
 
-Part IV — LLM post-training
+Part V — LLM post-training
 ├── supervised fine-tuning
 ├── chat formatting and assistant-only loss
 ├── token-level and sequence-level log-probabilities
@@ -434,83 +452,64 @@ The Git history is part of the learning record: small commits make it possible t
 
 Lessons **00–16** are complete.
 
-Part II — **Pretraining a Tiny GPT** — is now complete.
-
 Currently working on:
 
 ```text
-17_rl_foundations.ipynb
+17_mixture_of_experts.ipynb
 ```
 
-Lesson 16 connected the previously isolated components into one real pretraining experiment:
+Lesson 17 extends the dense Transformer along a different axis from attention.
+
+The dense baseline uses the same SwiGLU feed-forward network for every token:
 
 ```text
-raw text
+token representation
     ↓
-character tokenizer
+one shared FFN
     ↓
-contiguous train / validation split
-    ↓
-random next-token batches
-    ↓
-GPT with GQA + RoPE + SwiGLU
-    ↓
-cross-entropy
-    ↓
-AdamW + warmup / cosine schedule
-    ↓
-validation + perplexity
-    ↓
-checkpoint selection
-    ↓
-autoregressive generation
+updated representation
 ```
 
-The experiment showed both successful learning and overfitting: training loss continued to decrease while validation loss eventually plateaued and worsened. Generated samples learned Shakespeare-like spelling patterns, dialogue formatting, punctuation, local syntax, and partial semantics from next-token prediction alone.
-
-Reusable pretraining infrastructure now lives under `src/llmfp/`:
+Mixture of Experts introduces conditional computation:
 
 ```text
-data/
-├── CharacterTokenizer
-├── split_token_stream
-├── get_batch
-└── tokens_per_step
-
-training/
-├── language_model_training_step
-├── estimate_language_model_loss
-├── warmup_cosine_learning_rate
-├── save_training_checkpoint
-└── load_training_checkpoint
-
-generation/
-├── top-k / top-p filtering
-├── next-token sampling
-├── greedy generation
-└── cached greedy / sampled generation
+token representation
+    ↓
+router
+    ↓
+top-k experts
+    ↓
+selected expert FFNs
+    ↓
+weighted combination
 ```
 
-The next phase changes the learning signal itself.
+The central questions are:
 
-Language-model pretraining has an explicit target token at every position:
+> Why can a model have many more total parameters without activating all of them for every token?
+
+and
+
+> What new optimization and systems problems appear once different tokens are routed to different parameter subsets?
+
+After MoE, the project moves into reinforcement learning:
 
 ```text
-context → correct next token
+RL foundations
+    ↓
+policy gradients / REINFORCE
+    ↓
+actor-critic + GAE
+    ↓
+PPO
+    ↓
+SFT
+    ↓
+sequence log-probabilities + preference / reward modeling
+    ↓
+RLHF + KL regularization
+    ↓
+DPO
+    ↓
+modern LLM RL / preference optimization
 ```
-
-Reinforcement learning instead begins from actions and scalar feedback:
-
-```text
-state
-    ↓
-action
-    ↓
-environment / outcome
-    ↓
-reward
-```
-
-The central question for Lesson 17 is:
-
-> If there is no differentiable correct-action target, how can reward change the probability of the actions that produced it?
