@@ -16,6 +16,12 @@ from .linear_attention import (
     positive_feature_map,
 )
 from .mlp import SwiGLU
+from .moe import (
+    SparseMoE,
+    expert_capacity,
+    expert_utilization,
+    load_balancing_loss,
+)
 from .rope import apply_rope, build_rope_cos_sin, rope_frequencies
 from .transformer import TransformerBlock
 
@@ -24,6 +30,7 @@ __all__ = [
     "CausalSelfAttention",
     "GroupedQueryAttention",
     "LinearAttentionState",
+    "SparseMoE",
     "SwiGLU",
     "TransformerBlock",
     "additive_memory_update",
@@ -31,6 +38,9 @@ __all__ = [
     "build_rope_cos_sin",
     "delta_memory_update",
     "expand_kv_heads",
+    "expert_capacity",
+    "expert_utilization",
+    "load_balancing_loss",
     "positive_feature_map",
     "read_fast_weight_memory",
     "rope_frequencies",
