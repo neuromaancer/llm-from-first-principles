@@ -81,8 +81,8 @@ This lesson starts from the dense SwiGLU feed-forward network already used by th
 
 | Lesson | Topic | Status |
 |---|---|---|
-| 18 | RL Foundations: Trajectories, Return, Value, Q, Advantage, Bellman Equations | 🚧 In Progress |
-| 19 | Policy Gradients and REINFORCE from Scratch | Planned |
+| [18](lessons/18_rl_foundations.ipynb) | RL Foundations: Trajectories, Return, Value, Q, Advantage, Bellman Equations | ✅ Complete |
+| 19 | Policy Gradients and REINFORCE from Scratch | 🚧 In Progress |
 | 20 | Actor-Critic, TD Learning, and GAE | Planned |
 | 21 | PPO from Scratch | Planned |
 
@@ -373,7 +373,8 @@ llm-from-first-principles/
 │   ├── 14_multi_query_and_grouped_query_attention.ipynb
 │   ├── 15_linear_attention.ipynb
 │   ├── 16_pretraining_a_tiny_gpt.ipynb
-│   └── 17_mixture_of_experts.ipynb
+│   ├── 17_mixture_of_experts.ipynb
+│   └── 18_rl_foundations.ipynb
 │
 ├── src/
 │   └── llmfp/
@@ -390,6 +391,9 @@ llm-from-first-principles/
 │       │   └── tokenization.py
 │       ├── models/
 │       │   └── gpt.py
+│       ├── rl/
+│       │   ├── __init__.py
+│       │   └── returns.py
 │       ├── generation/
 │       │   ├── cache.py
 │       │   ├── generate.py
@@ -453,27 +457,15 @@ The Git history is part of the learning record: small commits make it possible t
 
 ## Current status
 
-Lessons **00–17** are complete.
+Lessons **00–18** are complete.
 
 Currently working on:
 
 ```text
-18_rl_foundations.ipynb
+19_policy_gradients_and_reinforce.ipynb
 ```
 
-Lesson 17 introduced learned conditional computation through sparse Mixture of Experts. Starting from the dense SwiGLU path, it developed token-level routing, top-k expert selection, dispatch/gather, router gradients, load balancing, capacity constraints, and the distinction between total and active parameters.
-
-Reusable MoE components live in:
-
-```text
-src/llmfp/nn/moe.py
-├── SparseMoE
-├── expert_utilization
-├── load_balancing_loss
-└── expert_capacity
-```
-
-Lesson 18 begins the reinforcement-learning section from first principles. The goal is to understand the objects that later policy-gradient and PPO methods manipulate before introducing any policy-gradient estimator:
+Lesson 18 established the reinforcement-learning quantities used by later policy-optimization methods:
 
 ```text
 state + action
@@ -482,13 +474,28 @@ transition + reward
     ↓
 trajectory
     ↓
-return
+discounted return
     ↓
 V(s), Q(s,a), advantage
     ↓
 Bellman relationships
     ↓
 Monte Carlo estimation
+    ↓
+mapping to autoregressive language models
 ```
 
-Only after these quantities are clear will the project move to policy gradients and REINFORCE.
+The first reusable RL primitive has now been extracted to:
+
+```text
+src/llmfp/rl/returns.py
+└── discounted_returns
+```
+
+The toy dictionary environment, policy-evaluation loop, and trajectory sampler remain in the lesson because they are teaching scaffolding rather than reusable infrastructure.
+
+Lesson 19 begins from the central policy-gradient problem:
+
+> A sampled discrete action is not differentiable with respect to the policy parameters, so how can reward change the probability of the action that was sampled?
+
+The next derivation starts from expected reward and develops the log-derivative trick, Monte Carlo policy-gradient estimation, and REINFORCE from first principles.
