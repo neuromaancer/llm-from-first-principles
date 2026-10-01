@@ -108,6 +108,7 @@ A function can move from **Introduced** to **Understood** once its behavior has 
 | `nn.Embedding` | ✅ | Maps integer token IDs to learned embedding vectors. |
 | `nn.Linear` | ✅ | Applies an affine transformation to the final feature dimension. |
 | `nn.Parameter` | ✅ | Registers a tensor as a trainable model parameter. |
+| `nn.init.zeros_` | ✅ | Fills a parameter tensor with zeros in-place; used to initialize tabular actor/critic parameters deliberately. |
 | `nn.ModuleList` | ✅ | Stores and registers a list of child modules. |
 | `nn.RMSNorm` | ✅ | Applies RMS normalization over the final feature dimension. |
 | `F.elu` | ✅ | Applies the ELU activation; used after deriving ELU(x) + 1 manually for the positive linear-attention feature map. |
@@ -148,3 +149,11 @@ These functions should be understood before the generation notebook moves on to 
 - `torch.autograd.grad` — used to inspect score-function gradients such as `d log pi(a) / d theta` directly.
 - `torch.multinomial` — revisited as categorical action sampling; the sampled index is discrete and gradients do not pass through the sampling operation.
 - `Tensor.detach` — revisited to separate stochastic sampling / credit weights from the differentiable log-probability path.
+
+
+## Lesson 20 — Actor-critic and GAE additions
+
+- `nn.init.zeros_` — used to initialize the tabular actor and critic at a known neutral starting point; the trailing underscore indicates an in-place operation.
+- `torch.no_grad` — revisited to freeze bootstrap targets and rollout-time measurements during critic/actor updates.
+- `Tensor.detach` — revisited to keep TD/advantage credit signals fixed when optimizing the actor.
+- `torch.zeros_like` — reused to allocate GAE advantage tensors with matching shape, dtype, and device.
