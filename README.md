@@ -82,8 +82,8 @@ This lesson starts from the dense SwiGLU feed-forward network already used by th
 | Lesson | Topic | Status |
 |---|---|---|
 | [18](lessons/18_rl_foundations.ipynb) | RL Foundations: Trajectories, Return, Value, Q, Advantage, Bellman Equations | ✅ Complete |
-| 19 | Policy Gradients and REINFORCE from Scratch | 🚧 In Progress |
-| 20 | Actor-Critic, TD Learning, and GAE | Planned |
+| [19](lessons/19_policy_gradients_and_reinforce.ipynb) | Policy Gradients and REINFORCE from Scratch | ✅ Complete |
+| 20 | Actor-Critic, TD Learning, and GAE | 🚧 In Progress |
 | 21 | PPO from Scratch | Planned |
 
 The RL section is intentionally focused. It does not try to reproduce a complete general-purpose RL curriculum; it develops the concepts needed to understand LLM post-training objectives from first principles.
@@ -374,7 +374,8 @@ llm-from-first-principles/
 │   ├── 15_linear_attention.ipynb
 │   ├── 16_pretraining_a_tiny_gpt.ipynb
 │   ├── 17_mixture_of_experts.ipynb
-│   └── 18_rl_foundations.ipynb
+│   ├── 18_rl_foundations.ipynb
+│   └── 19_policy_gradients_and_reinforce.ipynb
 │
 ├── src/
 │   └── llmfp/
@@ -393,6 +394,7 @@ llm-from-first-principles/
 │       │   └── gpt.py
 │       ├── rl/
 │       │   ├── __init__.py
+│       │   ├── policy_gradient.py
 │       │   └── returns.py
 │       ├── generation/
 │       │   ├── cache.py
@@ -457,45 +459,68 @@ The Git history is part of the learning record: small commits make it possible t
 
 ## Current status
 
-Lessons **00–18** are complete.
+Lessons **00–19** are complete.
 
 Currently working on:
 
 ```text
-19_policy_gradients_and_reinforce.ipynb
+20_actor_critic_td_and_gae.ipynb
 ```
 
-Lesson 18 established the reinforcement-learning quantities used by later policy-optimization methods:
+Lesson 19 derived policy gradients from expected reward rather than treating REINFORCE as a memorized formula:
 
 ```text
-state + action
+expected reward
     ↓
-transition + reward
+exact probability gradient
     ↓
-trajectory
+log-derivative trick
     ↓
-discounted return
+score-function estimator
     ↓
-V(s), Q(s,a), advantage
+Monte Carlo policy-gradient estimate
     ↓
-Bellman relationships
+REINFORCE
     ↓
-Monte Carlo estimation
+reward-to-go
     ↓
-mapping to autoregressive language models
+state baselines
+    ↓
+advantage-weighted log-probabilities
+    ↓
+autoregressive token policies
 ```
 
-The first reusable RL primitive has now been extracted to:
+Reusable RL pieces now include:
 
 ```text
-src/llmfp/rl/returns.py
-└── discounted_returns
+src/llmfp/rl/
+├── returns.py
+│   └── discounted_returns
+└── policy_gradient.py
+    └── reinforce_loss
 ```
 
-The toy dictionary environment, policy-evaluation loop, and trajectory sampler remain in the lesson because they are teaching scaffolding rather than reusable infrastructure.
+The REINFORCE helper keeps credit weights detached from the policy path, so gradients flow through sampled-action log-probabilities rather than through returns or advantage targets.
 
-Lesson 19 begins from the central policy-gradient problem:
+Lesson 20 moves from full Monte Carlo returns to learned value estimates and bootstrapping:
 
-> A sampled discrete action is not differentiable with respect to the policy parameters, so how can reward change the probability of the action that was sampled?
+```text
+Monte Carlo return
+    ↓
+critic V(s)
+    ↓
+TD target
+    ↓
+TD error
+    ↓
+actor-critic
+    ↓
+multi-step advantage estimation
+    ↓
+GAE
+```
 
-The next derivation starts from expected reward and develops the log-derivative trick, Monte Carlo policy-gradient estimation, and REINFORCE from first principles.
+The central question is:
+
+> Can we estimate useful policy credit before waiting for an entire trajectory to finish, while controlling the bias-variance trade-off?
