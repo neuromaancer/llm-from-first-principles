@@ -83,8 +83,8 @@ This lesson starts from the dense SwiGLU feed-forward network already used by th
 |---|---|---|
 | [18](lessons/18_rl_foundations.ipynb) | RL Foundations: Trajectories, Return, Value, Q, Advantage, Bellman Equations | ✅ Complete |
 | [19](lessons/19_policy_gradients_and_reinforce.ipynb) | Policy Gradients and REINFORCE from Scratch | ✅ Complete |
-| 20 | Actor-Critic, TD Learning, and GAE | 🚧 In Progress |
-| 21 | PPO from Scratch | Planned |
+| [20](lessons/20_actor_critic_td_and_gae.ipynb) | Actor-Critic, TD Learning, and GAE | ✅ Complete |
+| 21 | PPO from Scratch | 🚧 In Progress |
 
 The RL section is intentionally focused. It does not try to reproduce a complete general-purpose RL curriculum; it develops the concepts needed to understand LLM post-training objectives from first principles.
 
@@ -425,7 +425,8 @@ llm-from-first-principles/
 │   ├── 16_pretraining_a_tiny_gpt.ipynb
 │   ├── 17_mixture_of_experts.ipynb
 │   ├── 18_rl_foundations.ipynb
-│   └── 19_policy_gradients_and_reinforce.ipynb
+│   ├── 19_policy_gradients_and_reinforce.ipynb
+│   └── 20_actor_critic_td_and_gae.ipynb
 │
 ├── src/
 │   └── llmfp/
@@ -444,6 +445,7 @@ llm-from-first-principles/
 │       │   └── gpt.py
 │       ├── rl/
 │       │   ├── __init__.py
+│       │   ├── advantages.py
 │       │   ├── policy_gradient.py
 │       │   └── returns.py
 │       ├── generation/
@@ -509,83 +511,74 @@ The Git history is part of the learning record: small commits make it possible t
 
 ## Current status
 
-Lessons **00–19** are complete.
+Lessons **00–20** are complete.
 
 Currently working on:
 
 ```text
-20_actor_critic_td_and_gae.ipynb
+21_ppo_from_scratch.ipynb
 ```
 
-Lesson 19 derived policy gradients from expected reward rather than treating REINFORCE as a memorized formula:
+Lesson 20 connected Monte Carlo returns to bootstrapped value learning and then to generalized advantage estimation:
 
 ```text
-expected reward
+Monte Carlo return
     ↓
-exact probability gradient
+one-step TD target
     ↓
-log-derivative trick
+TD error
     ↓
-score-function estimator
+minimal critic
     ↓
-Monte Carlo policy-gradient estimate
+minimal actor-critic loop
     ↓
-REINFORCE
+n-step returns
     ↓
-reward-to-go
+TD(lambda)
     ↓
-state baselines
+GAE
     ↓
-advantage-weighted log-probabilities
-    ↓
-autoregressive token policies
+LLM token-level rollout alignment
 ```
 
-Reusable RL pieces now include:
+The lesson also established the first concrete tensor-alignment rules for the minimal RL-for-LLM stack:
+
+```text
+T generated actions
+    ↓
+T rewards / old log-probabilities / advantages / value targets
+    ↓
+T + 1 state values
+```
+
+and kept three categories separate:
+
+```text
+collection-time facts
+        ≠
+fixed learning targets
+        ≠
+current differentiable predictions
+```
+
+Reusable RL math now includes:
 
 ```text
 src/llmfp/rl/
 ├── returns.py
 │   └── discounted_returns
-└── policy_gradient.py
-    └── reinforce_loss
+├── policy_gradient.py
+│   └── reinforce_loss
+└── advantages.py
+    └── td_error
 ```
 
-The REINFORCE helper keeps credit weights detached from the policy path, so gradients flow through sampled-action log-probabilities rather than through returns or advantage targets.
+The tabular actor, tabular critic, tiny environment, n-step reference implementation, and complete-episode GAE implementation remain in the lesson because they are teaching scaffolding or because their final rollout-boundary contract is not yet stable enough for the reusable package.
 
-Lesson 20 moves from full Monte Carlo returns to learned value estimates and bootstrapping, while beginning the first trainable components of the minimal RL-for-LLM stack:
+In particular, the lesson's one-mask GAE implementation is correct for complete episodes, but PPO rollout segments will require a sharper distinction between true termination, rollout truncation, continuation through collected transitions, and padding. GAE will be extracted only after that contract is made explicit in Lesson 21.
 
-```text
-trajectory alignment
-    ↓
-critic V(s)
-    ↓
-TD target
-    ↓
-TD error
-    ↓
-actor-critic
-    ↓
-multi-step advantage estimation
-    ↓
-GAE
-```
+Lesson 21 now asks:
 
-Before introducing a critic module, the lesson first makes the time alignment explicit:
+> How can one collected rollout batch support multiple policy updates without letting the new policy move too far from the behavior policy that generated the data?
 
-```text
-state s_t
-    ↓ action a_t
-reward r_t
-    ↓
-state s_{t+1}
-
-V(s_t)      → baseline for action a_t
-V(s_{t+1})  → bootstrap value
-```
-
-This alignment will later become the tensor contract for token-level rollouts.
-
-The central question is:
-
-> Can we estimate useful policy credit before waiting for an entire trajectory to finish, while controlling the bias-variance trade-off?
+That question introduces old log-probabilities, probability ratios, clipped policy objectives, minibatch reuse, and the first end-to-end PPO version of the minimal RL-for-LLM stack.
