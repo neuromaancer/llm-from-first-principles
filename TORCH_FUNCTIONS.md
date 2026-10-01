@@ -76,6 +76,7 @@ A function can move from **Introduced** to **Understood** once its behavior has 
 | Function / method | Status | What it does |
 |---|---|---|
 | `torch.softmax` / `F.softmax` | ✅ | Converts logits into a normalized probability distribution. |
+| `torch.log_softmax` / `F.log_softmax` | ✅ | Converts logits into numerically stable log-probabilities along a chosen dimension. |
 | `F.cross_entropy` | ✅ | Computes cross-entropy loss from logits and class targets. |
 | `torch.multinomial` | ✅ | Samples indices according to categorical weights or probabilities. |
 | `torch.argmax` | ✅ | Returns the index of the largest value. |
@@ -85,9 +86,20 @@ A function can move from **Introduced** to **Understood** once its behavior has 
 | Function / method | Status | What it does |
 |---|---|---|
 | `Tensor.backward` | ✅ | Runs reverse-mode automatic differentiation from a scalar loss. |
+| `torch.autograd.grad` | ✅ | Computes gradients of selected outputs with respect to selected inputs without relying on parameter `.grad` accumulation. |
 | `Tensor.detach` | ✅ | Returns a tensor detached from the autograd graph. |
 | `Tensor.clone` | ✅ | Creates a separate tensor containing copied values. |
 | `torch.no_grad` | ✅ | Disables autograd graph construction inside a context. |
+
+## Optimization and training
+
+| Function / method | Status | What it does |
+|---|---|---|
+| `torch.optim.SGD` | ✅ | PyTorch stochastic-gradient-descent optimizer used after manually deriving SGD in an earlier lesson. |
+| `torch.optim.AdamW` | ✅ | PyTorch AdamW optimizer used for the end-to-end pretraining experiment. |
+| `Optimizer.zero_grad` | ✅ | Clears or resets parameter gradients before the next backward pass. |
+| `Optimizer.step` | ✅ | Applies one optimizer update using the currently accumulated gradients. |
+| `torch.nn.utils.clip_grad_norm_` | ✅ | Clips the global parameter-gradient norm in-place to limit unusually large training updates. |
 
 ## Neural-network utilities
 
@@ -128,3 +140,11 @@ These functions should be understood before the generation notebook moves on to 
 
 - `F.elu` — used in reusable source only after the notebook derived the positive feature map manually.
 - `torch.cumsum` — reused to construct causal prefix states for parallel linear attention.
+
+
+## Lesson 19 — Policy-gradient additions
+
+- `torch.log_softmax` — used to keep sampled-action log-probabilities differentiable and numerically stable.
+- `torch.autograd.grad` — used to inspect score-function gradients such as `d log pi(a) / d theta` directly.
+- `torch.multinomial` — revisited as categorical action sampling; the sampled index is discrete and gradients do not pass through the sampling operation.
+- `Tensor.detach` — revisited to separate stochastic sampling / credit weights from the differentiable log-probability path.
