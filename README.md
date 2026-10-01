@@ -88,6 +88,49 @@ This lesson starts from the dense SwiGLU feed-forward network already used by th
 
 The RL section is intentionally focused. It does not try to reproduce a complete general-purpose RL curriculum; it develops the concepts needed to understand LLM post-training objectives from first principles.
 
+The implementation goal is a **minimal RL-for-LLM stack**, not a generic RL framework. Each lesson should add one verified piece to a small end-to-end system rather than leaving the mathematics isolated in notebooks.
+
+The design is organized around five responsibilities:
+
+```text
+Models
+├── Actor / token policy
+└── Critic / value model
+
+Collection
+└── sample token trajectories under the current policy
+
+Data
+└── store rollout facts and learning targets with explicit token alignment
+
+RL math
+├── returns
+├── TD errors
+├── advantages / GAE
+└── policy / value / PPO objectives
+
+Experiment loop
+└── collect → construct targets → update → evaluate → checkpoint
+```
+
+The first version deliberately keeps these responsibilities explicit. Trainable predictors use `nn.Module`; trajectory data uses typed tensor containers; core RL mathematics stays in small tensor functions; and the experiment loop remains thin and readable.
+
+A central design rule is to distinguish three kinds of quantities:
+
+```text
+facts recorded at collection time
+        ≠
+fixed learning targets for an update
+        ≠
+current differentiable model predictions
+```
+
+For example, PPO will distinguish rollout-time log-probabilities from current log-probabilities, while advantages and value targets are treated as fixed credit signals during an update.
+
+The LLM version stores each prompt-plus-completion sequence once rather than materializing a separate full prefix for every state. Per-action quantities such as rewards, log-probabilities, values, advantages, and masks are aligned to generated token positions.
+
+The framework will grow only after mechanisms are derived and verified in the lessons. Empty abstractions are intentionally avoided.
+
 ### Part V — LLM Post-Training
 
 | Lesson | Topic | Status |
@@ -255,7 +298,14 @@ Part IV — Reinforcement-learning foundations
 ├── actor-critic methods
 ├── temporal-difference learning
 ├── generalized advantage estimation
-└── PPO
+├── PPO
+└── minimal RL-for-LLM integration
+    ├── token-policy rollout
+    ├── rollout-time log-probabilities
+    ├── critic values
+    ├── action masks and trajectory boundaries
+    ├── advantages and value targets
+    └── policy / value updates
 
 Part V — LLM post-training
 ├── supervised fine-tuning
@@ -503,10 +553,10 @@ src/llmfp/rl/
 
 The REINFORCE helper keeps credit weights detached from the policy path, so gradients flow through sampled-action log-probabilities rather than through returns or advantage targets.
 
-Lesson 20 moves from full Monte Carlo returns to learned value estimates and bootstrapping:
+Lesson 20 moves from full Monte Carlo returns to learned value estimates and bootstrapping, while beginning the first trainable components of the minimal RL-for-LLM stack:
 
 ```text
-Monte Carlo return
+trajectory alignment
     ↓
 critic V(s)
     ↓
@@ -520,6 +570,21 @@ multi-step advantage estimation
     ↓
 GAE
 ```
+
+Before introducing a critic module, the lesson first makes the time alignment explicit:
+
+```text
+state s_t
+    ↓ action a_t
+reward r_t
+    ↓
+state s_{t+1}
+
+V(s_t)      → baseline for action a_t
+V(s_{t+1})  → bootstrap value
+```
+
+This alignment will later become the tensor contract for token-level rollouts.
 
 The central question is:
 
