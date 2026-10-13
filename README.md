@@ -84,7 +84,10 @@ This lesson starts from the dense SwiGLU feed-forward network already used by th
 | [18](lessons/18_rl_foundations.ipynb) | RL Foundations: Trajectories, Return, Value, Q, Advantage, Bellman Equations | ✅ Complete |
 | [19](lessons/19_policy_gradients_and_reinforce.ipynb) | Policy Gradients and REINFORCE from Scratch | ✅ Complete |
 | [20](lessons/20_actor_critic_td_and_gae.ipynb) | Actor-Critic, TD Learning, and GAE | ✅ Complete |
-| 21 | PPO from Scratch | 🚧 In Progress |
+| [21A](lessons/21a_ppo_from_scratch.ipynb) | PPO from Scratch: clipping, GAE, rollout reuse, and a complete toy training loop | ✅ Complete |
+| 21B | PPO with Tiny GPT: Transformer Actor/Critic integration | Planned |
+
+**Lesson 21A is complete.** Its notebook remains a self-contained, manually worked-through derivation and toy experiment. Its verified, reusable PPO losses, 1D GAE, action/critic alignment, and right-padded sequence rollout contracts are now available from `llmfp.rl`, with regression tests in `tests/test_ppo_primitives.py`. The GPT integration is deliberately reserved for Lesson 21B; the overall Lesson 21 sequence is not yet complete.
 
 The RL section is intentionally focused. It does not try to reproduce a complete general-purpose RL curriculum; it develops the concepts needed to understand LLM post-training objectives from first principles.
 
@@ -372,6 +375,14 @@ uv sync
 
 The lessons are Jupyter notebooks and can be opened directly in VS Code or through Jupyter.
 
+Run the reusable PPO regression checks with:
+
+```bash
+uv run python -m unittest discover -s tests -v
+```
+
+The PPO helpers assume generated-action positions are consecutive with right-side action padding; the three masks (`action_mask`, `bootstrap_mask`, `continuation_mask`) retain distinct meanings.
+
 The project interpreter should point to:
 
 ```text
@@ -426,7 +437,8 @@ llm-from-first-principles/
 │   ├── 17_mixture_of_experts.ipynb
 │   ├── 18_rl_foundations.ipynb
 │   ├── 19_policy_gradients_and_reinforce.ipynb
-│   └── 20_actor_critic_td_and_gae.ipynb
+│   ├── 20_actor_critic_td_and_gae.ipynb
+│   └── 21a_ppo_from_scratch.ipynb
 │
 ├── src/
 │   └── llmfp/
@@ -446,8 +458,11 @@ llm-from-first-principles/
 │       ├── rl/
 │       │   ├── __init__.py
 │       │   ├── advantages.py
+│       │   ├── alignment.py
 │       │   ├── policy_gradient.py
-│       │   └── returns.py
+│       │   ├── ppo.py
+│       │   ├── returns.py
+│       │   └── rollouts.py
 │       ├── generation/
 │       │   ├── cache.py
 │       │   ├── generate.py
@@ -461,6 +476,8 @@ llm-from-first-principles/
 │           ├── inspection.py
 │           └── metrics.py
 │
+├── tests/
+│   └── test_ppo_primitives.py
 ├── data/                # large/generated datasets are not committed
 ├── checkpoints/         # ignored
 ├── TORCH_FUNCTIONS.md   # PyTorch API learning tracker

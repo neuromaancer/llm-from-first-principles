@@ -27,6 +27,8 @@ A function can move from **Introduced** to **Understood** once its behavior has 
 |---|---|---|
 | `torch.tensor` | ✅ | Creates a tensor from explicit values. |
 | `torch.arange` | ✅ | Creates evenly spaced integer-like values over a range. |
+| `torch.linspace` | ✅ | Creates evenly spaced floating-point values between endpoints, including them by default. |
+| `torch.randperm` | ✅ | Returns a random permutation of integer indices, used to shuffle PPO sequence minibatches. |
 | `torch.zeros` | ✅ | Creates a tensor filled with zeros. |
 | `torch.zeros_like` | ✅ | Creates zeros with the same shape, dtype, and device as another tensor. |
 | `torch.ones` | ✅ | Creates a tensor filled with ones. |
@@ -35,6 +37,8 @@ A function can move from **Introduced** to **Understood** once its behavior has 
 | `torch.randn` | ✅ | Samples values from a standard normal distribution. |
 | `torch.randint` | ✅ | Samples integer values from a specified range. |
 | `Tensor.reshape` | ✅ | Changes tensor shape without changing the logical values. |
+| `Tensor.expand` | ✅ | Broadcasts singleton dimensions without copying the underlying values. |
+| `Tensor.numel` | ✅ | Returns the total number of tensor elements, useful for detecting empty masks. |
 | `Tensor.unsqueeze` | ✅ | Inserts a size-1 dimension. |
 | `Tensor.squeeze` | ✅ | Removes size-1 dimensions. |
 | `Tensor.transpose` | ✅ | Swaps two tensor dimensions. |
@@ -50,6 +54,8 @@ A function can move from **Introduced** to **Understood** once its behavior has 
 | `torch.exp` | ✅ | Applies the exponential function element-wise. |
 | `torch.log` | ✅ | Applies the natural logarithm element-wise. |
 | `torch.sqrt` | ✅ | Applies square root element-wise. |
+| `torch.clamp` | ✅ | Limits each value to given bounds; PPO clips importance ratios in its objective. |
+| `torch.minimum` | ✅ | Takes the element-wise minimum of two tensors; PPO uses it for its clipped surrogate. |
 | `Tensor.square` | ✅ | Squares every tensor element. |
 | `Tensor.mean` | ✅ | Computes a mean over selected dimensions. |
 | `Tensor.var` | ✅ | Computes variance over selected dimensions. |
@@ -63,6 +69,8 @@ A function can move from **Introduced** to **Understood** once its behavior has 
 | Function / method | Status | What it does |
 |---|---|---|
 | `torch.maximum` | ✅ | Computes the element-wise maximum. |
+| `torch.any` | ✅ | Checks whether at least one Boolean condition is true. |
+| `torch.all` | ✅ | Checks whether all Boolean conditions are true. |
 | `torch.where` | ✅ | Selects values element-wise according to a Boolean condition. |
 | `Tensor.masked_fill` | ✅ | Replaces values where a Boolean mask is true. |
 | `torch.topk` | ✅ | Returns the largest or smallest k values and their original indices. |
@@ -157,3 +165,14 @@ These functions should be understood before the generation notebook moves on to 
 - `torch.no_grad` — revisited to freeze bootstrap targets and rollout-time measurements during critic/actor updates.
 - `Tensor.detach` — revisited to keep TD/advantage credit signals fixed when optimizing the actor.
 - `torch.zeros_like` — reused to allocate GAE advantage tensors with matching shape, dtype, and device.
+
+## Lesson 21A — PPO from Scratch additions
+
+- `torch.clamp` and `torch.minimum` — construct the advantage-aware clipped PPO surrogate; clipping is not a hard constraint on updated policy probabilities.
+- `torch.randperm` — shuffle complete trajectory indices before selecting aligned sequence minibatches.
+- `torch.linspace` — display ratio-dependent objective curves for positive and negative advantages.
+- `Tensor.expand` — share a small position template across a batch without duplicating data.
+- `Tensor.numel` — reject masked reductions with no valid actions.
+- `torch.any` and `torch.all` — validate action position, padding, and termination invariants.
+
+The RL primitives extracted after Lesson 21A live in `src/llmfp/rl/`; their regression tests use only the Python standard library and PyTorch.
