@@ -1,130 +1,2697 @@
-# PyTorch Function Tracker
+# PyTorch Function Reference
 
-This file tracks PyTorch functions and methods encountered while building the model.
+A learning reference for **LLM from First Principles** — 68 API entries, all currently marked **Understood**.
 
-The purpose is not to document the whole PyTorch API. It is a learning index for this repository.
+Open a function to see its **signature → parameters → example → output**. The examples show common calls; the parameter tables cover the optional arguments separately.
 
-## Rule
+| Browse | Entries |
+|:--|--:|
+| [Tensor creation & shapes](#tensor-creation-and-shape-operations) | 21 |
+| [Numerical operations & reductions](#numerical-and-reduction-operations) | 12 |
+| [Indexing & comparisons](#indexing-filtering-and-comparison) | 10 |
+| [Probability & sampling](#probability-and-sampling) | 5 |
+| [Autograd](#autograd-and-parameter-handling) | 5 |
+| [Optimization](#optimization-and-training) | 5 |
+| [Neural-network utilities](#neural-network-utilities) | 10 |
 
-When a new PyTorch function or method appears in a lesson:
+## Shared setup
 
-1. explain what it does before relying on it,
-2. identify its important input/output shapes,
-3. show a minimal example when the behavior is not obvious,
-4. record it here,
-5. distinguish in-place operations such as `scatter_` from out-of-place operations.
+Run this once before any example. Each example is otherwise independent.
 
-A function can move from **Introduced** to **Understood** once its behavior has been explained and used deliberately.
+```python
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
 
-## Status
+torch.set_printoptions(precision=4, sci_mode=False, linewidth=80)
+```
 
-- ✅ **Understood** — already explained and used intentionally.
-- 🟡 **Introduced** — recently encountered; keep an eye on it in the current lesson.
+**Dimensions:** `B` sequences · `T` token/action positions · `V` vocabulary · `C` features · `H` heads · `D` head width. `()` means a scalar.
+
+**Notation:** `x` is an existing tensor; `optimizer` is an optimizer instance. `*` introduces keyword-only arguments; `*size` accepts multiple dimensions. Arguments with no default are required. A trailing `_` usually denotes an in-place operation.
+
+**Output check:** All 68 examples below were executed on CPU with **PyTorch 2.10.0 / Python 3.13.5**. The repository requests `torch>=2.14.0`; these outputs are not a test of that environment. Seeded random values and numerical formatting can differ across versions/devices. Internal, deprecated, and overload-specific options are labeled rather than forced into the examples.
 
 ## Tensor creation and shape operations
 
-| Function / method | Status | What it does |
-|---|---|---|
-| `torch.tensor` | ✅ | Creates a tensor from explicit values. |
-| `torch.arange` | ✅ | Creates evenly spaced integer-like values over a range. |
-| `torch.linspace` | ✅ | Creates evenly spaced floating-point values between endpoints, including them by default. |
-| `torch.randperm` | ✅ | Returns a random permutation of integer indices, used to shuffle PPO sequence minibatches. |
-| `torch.zeros` | ✅ | Creates a tensor filled with zeros. |
-| `torch.zeros_like` | ✅ | Creates zeros with the same shape, dtype, and device as another tensor. |
-| `torch.ones` | ✅ | Creates a tensor filled with ones. |
-| `torch.ones_like` | ✅ | Creates ones with the same shape, dtype, and device as another tensor. |
-| `torch.full_like` | ✅ | Creates a tensor with the same shape, dtype, and device as another tensor, filled with a chosen value. |
-| `torch.randn` | ✅ | Samples values from a standard normal distribution. |
-| `torch.randint` | ✅ | Samples integer values from a specified range. |
-| `Tensor.reshape` | ✅ | Changes tensor shape without changing the logical values. |
-| `Tensor.expand` | ✅ | Broadcasts singleton dimensions without copying the underlying values. |
-| `Tensor.numel` | ✅ | Returns the total number of tensor elements, useful for detecting empty masks. |
-| `Tensor.unsqueeze` | ✅ | Inserts a size-1 dimension. |
-| `Tensor.squeeze` | ✅ | Removes size-1 dimensions. |
-| `Tensor.transpose` | ✅ | Swaps two tensor dimensions. |
-| `Tensor.flatten` | ✅ | Collapses a range of dimensions into one. |
-| `torch.stack` | ✅ | Creates a new dimension and stacks tensors along it. |
-| `torch.cat` | ✅ | Concatenates tensors along an existing dimension. |
-| `torch.repeat_interleave` | ✅ | Repeats tensor entries a fixed number of times along a selected dimension. |
+<details>
+<summary><code>torch.tensor</code> — Create a tensor by copying explicit data.</summary>
+
+**Signature**
+
+```python
+torch.tensor(data, *, dtype=None, device=None,
+             requires_grad=False, pin_memory=False)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `data` | Required | Scalar, list, tuple, or array-like source. |
+| `dtype` | `None` | Element type; inferred from data when omitted. |
+| `device` | `None` | Output device; follows the current default when omitted. |
+| `requires_grad` | `False` | Record gradients for floating-point or complex values. |
+| `pin_memory` | `False` | Allocate pinned CPU memory. |
+
+**Example**
+
+```python
+# Purpose: Create a two-sequence integer token batch.
+tokens = torch.tensor([[1, 2, 3], [4, 5, 6]], dtype=torch.long)
+# (B=2, T=3): sequences, token positions
+print(tokens)
+```
+
+**Output**
+
+```text
+tensor([[1, 2, 3],
+        [4, 5, 6]])
+```
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.tensor.html)
+
+</details>
+
+<details>
+<summary><code>torch.arange</code> — Create evenly spaced values with an exclusive endpoint.</summary>
+
+**Signature**
+
+```python
+torch.arange(start, end, step=1, *, out=None, dtype=None,
+             layout=torch.strided, device=None, requires_grad=False)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `start` | 0 in end-only call | Inclusive start; omit it in torch.arange(end). |
+| `end` | Required | Exclusive upper or lower endpoint. |
+| `step` | `1` | Nonzero signed spacing. |
+| `out` | `None` | Optional destination tensor. |
+| `dtype` | `None` | Inferred from start, end, and step. |
+| `layout` | `torch.strided` | Storage layout. |
+| `device` | `None` | Output device. |
+| `requires_grad` | `False` | Enable gradient recording. |
+
+**Example**
+
+```python
+# Purpose: Build every other token position.
+positions = torch.arange(1, 7, step=2)
+# (T=3,): selected positions
+print(positions)
+```
+
+**Output**
+
+```text
+tensor([1, 3, 5])
+```
+
+The end-only overload is `torch.arange(end, ...)`; it starts at zero.
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.arange.html)
+
+</details>
+
+<details>
+<summary><code>torch.linspace</code> — Create a fixed number of evenly spaced values, including both endpoints.</summary>
+
+**Signature**
+
+```python
+torch.linspace(start, end, steps, *, out=None, dtype=None,
+               layout=torch.strided, device=None, requires_grad=False)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `start` | Required | First value. |
+| `end` | Required | Last value when steps is greater than one. |
+| `steps` | Required | Number of output values. |
+| `out` | `None` | Optional destination tensor. |
+| `dtype` | `None` | Output type; inferred from endpoints and the default dtype. |
+| `layout` | `torch.strided` | Storage layout. |
+| `device` | `None` | Output device. |
+| `requires_grad` | `False` | Enable gradient recording. |
+
+**Example**
+
+```python
+# Purpose: Make five points for a probability plot.
+grid = torch.linspace(0.0, 1.0, steps=5)
+# (N=5,): grid points
+print(grid)
+```
+
+**Output**
+
+```text
+tensor([0.0000, 0.2500, 0.5000, 0.7500, 1.0000])
+```
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.linspace.html)
+
+</details>
+
+<details>
+<summary><code>torch.randperm</code> — Shuffle the integers from zero through n minus one.</summary>
+
+**Signature**
+
+```python
+torch.randperm(n, *, generator=None, out=None, dtype=torch.int64,
+               layout=torch.strided, device=None, requires_grad=False,
+               pin_memory=False)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `n` | Required | Number of indices to permute. |
+| `generator` | `None` | Optional random-number generator. |
+| `out` | `None` | Optional destination tensor. |
+| `dtype` | `torch.int64` | Output element type. |
+| `layout` | `torch.strided` | Storage layout. |
+| `device` | `None` | Output device. |
+| `requires_grad` | `False` | Keep False for integer indices. |
+| `pin_memory` | `False` | Allocate pinned CPU memory. |
+
+**Example**
+
+```python
+# Purpose: Shuffle trajectory indices reproducibly.
+rng = torch.Generator().manual_seed(42)
+order = torch.randperm(5, generator=rng)
+# (B=5,): sequence indices in shuffled order
+print(order)
+```
+
+**Output**
+
+```text
+tensor([2, 4, 3, 0, 1])
+```
+
+A seeded random output is a reference run, not a cross-version guarantee.
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.randperm.html)
+
+</details>
+
+<details>
+<summary><code>torch.zeros</code> — Create a tensor filled with zeros.</summary>
+
+**Signature**
+
+```python
+torch.zeros(*size, out=None, dtype=None, layout=torch.strided,
+            device=None, requires_grad=False, pin_memory=False)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `*size` | Required | Output dimensions, passed separately or as a tuple. |
+| `out` | `None` | Optional destination tensor. |
+| `dtype` | `None` | Uses the default floating-point dtype when omitted. |
+| `layout` | `torch.strided` | Storage layout. |
+| `device` | `None` | Output device. |
+| `requires_grad` | `False` | Enable gradient recording. |
+| `pin_memory` | `False` | Pinned CPU allocation option. |
+
+**Example**
+
+```python
+# Purpose: Initialize a two-sequence, three-action table.
+x = torch.zeros(2, 3)
+# (B=2, T=3): sequences, action positions
+print(x)
+```
+
+**Output**
+
+```text
+tensor([[0., 0., 0.],
+        [0., 0., 0.]])
+```
+
+`pin_memory` is an allocation option accepted by the tested implementation; it may be absent from the shorter public documentation signature.
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.zeros.html)
+
+</details>
+
+<details>
+<summary><code>torch.zeros_like</code> — Create a filled tensor matching a reference tensor.</summary>
+
+**Signature**
+
+```python
+torch.zeros_like(input, *, dtype=None, layout=None, device=None,
+                 requires_grad=False, memory_format=torch.preserve_format)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `input` | Required | Reference tensor; supplies shape and default dtype/device. |
+| `dtype` | `None` | Override the reference dtype. |
+| `layout` | `None` | Inherit the reference layout unless overridden. |
+| `device` | `None` | Inherit the reference device unless overridden. |
+| `requires_grad` | `False` | Set independently of the reference gradient flag. |
+| `memory_format` | `torch.preserve_format` | Preserve the reference memory format where possible. |
+
+**Example**
+
+```python
+# Purpose: Allocate values with the same shape as a token-score table.
+reference = torch.tensor([[0.2, 0.8], [0.6, 0.4]])
+# (B=2, T=2): sequences, action scores
+print(torch.zeros_like(reference))
+```
+
+**Output**
+
+```text
+tensor([[0., 0.],
+        [0., 0.]])
+```
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.zeros_like.html)
+
+</details>
+
+<details>
+<summary><code>torch.ones</code> — Create a tensor filled with ones.</summary>
+
+**Signature**
+
+```python
+torch.ones(*size, out=None, dtype=None, layout=torch.strided,
+            device=None, requires_grad=False, pin_memory=False)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `*size` | Required | Output dimensions, passed separately or as a tuple. |
+| `out` | `None` | Optional destination tensor. |
+| `dtype` | `None` | Uses the default floating-point dtype when omitted. |
+| `layout` | `torch.strided` | Storage layout. |
+| `device` | `None` | Output device. |
+| `requires_grad` | `False` | Enable gradient recording. |
+| `pin_memory` | `False` | Pinned CPU allocation option. |
+
+**Example**
+
+```python
+# Purpose: Initialize a two-sequence, three-action table.
+x = torch.ones(2, 3)
+# (B=2, T=3): sequences, action positions
+print(x)
+```
+
+**Output**
+
+```text
+tensor([[1., 1., 1.],
+        [1., 1., 1.]])
+```
+
+`pin_memory` is an allocation option accepted by the tested implementation; it may be absent from the shorter public documentation signature.
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.ones.html)
+
+</details>
+
+<details>
+<summary><code>torch.ones_like</code> — Create a filled tensor matching a reference tensor.</summary>
+
+**Signature**
+
+```python
+torch.ones_like(input, *, dtype=None, layout=None, device=None,
+                 requires_grad=False, memory_format=torch.preserve_format)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `input` | Required | Reference tensor; supplies shape and default dtype/device. |
+| `dtype` | `None` | Override the reference dtype. |
+| `layout` | `None` | Inherit the reference layout unless overridden. |
+| `device` | `None` | Inherit the reference device unless overridden. |
+| `requires_grad` | `False` | Set independently of the reference gradient flag. |
+| `memory_format` | `torch.preserve_format` | Preserve the reference memory format where possible. |
+
+**Example**
+
+```python
+# Purpose: Allocate values with the same shape as a token-score table.
+reference = torch.tensor([[0.2, 0.8], [0.6, 0.4]])
+# (B=2, T=2): sequences, action scores
+print(torch.ones_like(reference))
+```
+
+**Output**
+
+```text
+tensor([[1., 1.],
+        [1., 1.]])
+```
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.ones_like.html)
+
+</details>
+
+<details>
+<summary><code>torch.full_like</code> — Create a filled tensor matching a reference tensor.</summary>
+
+**Signature**
+
+```python
+torch.full_like(input, fill_value, *, dtype=None, layout=None, device=None,
+                 requires_grad=False, memory_format=torch.preserve_format)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `input` | Required | Reference tensor; supplies shape and default dtype/device. |
+| `fill_value` | Required | Scalar value used to fill the output. |
+| `dtype` | `None` | Override the reference dtype. |
+| `layout` | `None` | Inherit the reference layout unless overridden. |
+| `device` | `None` | Inherit the reference device unless overridden. |
+| `requires_grad` | `False` | Set independently of the reference gradient flag. |
+| `memory_format` | `torch.preserve_format` | Preserve the reference memory format where possible. |
+
+**Example**
+
+```python
+# Purpose: Allocate values with the same shape as a token-score table.
+reference = torch.tensor([[0.2, 0.8], [0.6, 0.4]])
+# (B=2, T=2): sequences, action scores
+print(torch.full_like(reference, -1.0))
+```
+
+**Output**
+
+```text
+tensor([[-1., -1.],
+        [-1., -1.]])
+```
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.full_like.html)
+
+</details>
+
+<details>
+<summary><code>torch.randn</code> — Sample standard-normal random values.</summary>
+
+**Signature**
+
+```python
+torch.randn(*size, generator=None, out=None, dtype=None,
+            layout=torch.strided, device=None, requires_grad=False,
+            pin_memory=False)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `*size` | Required | Output dimensions. |
+| `generator` | `None` | Optional random-number generator. |
+| `out` | `None` | Optional destination tensor. |
+| `dtype` | `None` | Output floating-point or complex dtype. |
+| `layout` | `torch.strided` | Storage layout. |
+| `device` | `None` | Output device. |
+| `requires_grad` | `False` | Enable gradient recording. |
+| `pin_memory` | `False` | Allocate pinned CPU memory. |
+
+**Example**
+
+```python
+# Purpose: Generate a small, reproducible noise vector.
+rng = torch.Generator().manual_seed(42)
+noise = torch.randn(3, generator=rng)
+# (C=3,): feature values
+print(noise)
+```
+
+**Output**
+
+```text
+tensor([0.3367, 0.1288, 0.2345])
+```
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.randn.html)
+
+</details>
+
+<details>
+<summary><code>torch.randint</code> — Sample integers between an inclusive low and exclusive high.</summary>
+
+**Signature**
+
+```python
+torch.randint(low, high, size, *, generator=None, out=None,
+              dtype=None, layout=torch.strided, device=None,
+              requires_grad=False)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `low` | 0 in high-only call | Inclusive lower bound. |
+| `high` | Required | Exclusive upper bound. |
+| `size` | Required | Output shape. |
+| `generator` | `None` | Optional random-number generator. |
+| `out` | `None` | Optional destination tensor. |
+| `dtype` | `None` | Defaults to torch.int64. |
+| `layout` | `torch.strided` | Storage layout. |
+| `device` | `None` | Output device. |
+| `requires_grad` | `False` | Keep False for integer samples. |
+
+**Example**
+
+```python
+# Purpose: Sample the two toy prompt types.
+rng = torch.Generator().manual_seed(42)
+kinds = torch.randint(1, 3, (6,), generator=rng)
+# (B=6,): one prompt type per sequence
+print(kinds)
+```
+
+**Output**
+
+```text
+tensor([1, 2, 1, 1, 1, 2])
+```
+
+The high-only overload is `torch.randint(high, size, ...)`; low is then zero.
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.randint.html)
+
+</details>
+
+<details>
+<summary><code>Tensor.reshape</code> — Change shape while preserving element order and count.</summary>
+
+**Signature**
+
+```python
+x.reshape(*shape)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `*shape` | Required | Target dimensions; one may be -1 to infer its size. |
+
+**Example**
+
+```python
+# Purpose: Turn a flat token vector into a batch.
+x = torch.arange(6)  # (N=6,): flat token IDs
+y = x.reshape(2, 3)  # (B=2, T=3): sequences, tokens
+print(y)
+```
+
+**Output**
+
+```text
+tensor([[0, 1, 2],
+        [3, 4, 5]])
+```
+
+May return a view or a copy; do not assume independent storage.
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.Tensor.reshape.html)
+
+</details>
+
+<details>
+<summary><code>Tensor.expand</code> — Broadcast singleton dimensions without copying data.</summary>
+
+**Signature**
+
+```python
+x.expand(*sizes)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `*sizes` | Required | Expanded dimensions; -1 keeps an existing dimension unchanged. |
+
+**Example**
+
+```python
+# Purpose: Reuse one action-position template across two sequences.
+positions = torch.tensor([[2, 3]])  # (1, T=2)
+print(positions.expand(2, -1))      # (B=2, T=2)
+```
+
+**Output**
+
+```text
+tensor([[2, 3],
+        [2, 3]])
+```
+
+Expanded entries may share storage. Avoid in-place writes to the expanded view.
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.Tensor.expand.html)
+
+</details>
+
+<details>
+<summary><code>Tensor.numel</code> — Return the total number of tensor elements.</summary>
+
+**Signature**
+
+```python
+x.numel()
+```
+
+**Parameters:** None.
+
+**Example**
+
+```python
+# Purpose: Count all elements, not only True entries.
+mask = torch.tensor([[True, False, True]])  # (B=1, T=3)
+print(mask.numel())
+```
+
+**Output**
+
+```text
+3
+```
+
+Use `mask.sum()` to count True entries instead.
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.Tensor.numel.html)
+
+</details>
+
+<details>
+<summary><code>Tensor.unsqueeze</code> — Insert a dimension of size one.</summary>
+
+**Signature**
+
+```python
+x.unsqueeze(dim)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `dim` | Required | Axis at which to insert the singleton dimension; may be negative. |
+
+**Example**
+
+```python
+# Purpose: Add a batch dimension to one token sequence.
+x = torch.tensor([1, 2, 3])  # (T=3,)
+print(x.unsqueeze(0))        # (B=1, T=3)
+```
+
+**Output**
+
+```text
+tensor([[1, 2, 3]])
+```
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.Tensor.unsqueeze.html)
+
+</details>
+
+<details>
+<summary><code>Tensor.squeeze</code> — Remove selected dimensions of size one.</summary>
+
+**Signature**
+
+```python
+x.squeeze(dim=None)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `dim` | `None` | Axis or tuple of axes to squeeze; None removes all size-one axes. |
+
+**Example**
+
+```python
+# Purpose: Remove only the singleton sampling dimension.
+x = torch.tensor([[3], [4]])  # (B=2, K=1)
+print(x.squeeze(dim=1))       # (B=2,)
+```
+
+**Output**
+
+```text
+tensor([3, 4])
+```
+
+Specify dim so a batch of size one is not accidentally removed.
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.Tensor.squeeze.html)
+
+</details>
+
+<details>
+<summary><code>Tensor.transpose</code> — Swap two tensor dimensions.</summary>
+
+**Signature**
+
+```python
+x.transpose(dim0, dim1)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `dim0` | Required | First axis to swap. |
+| `dim1` | Required | Second axis to swap. |
+
+**Example**
+
+```python
+# Purpose: Swap the two axes of a small matrix.
+x = torch.tensor([[1, 2, 3], [4, 5, 6]])  # (B=2, T=3)
+print(x.transpose(0, 1))                  # (T=3, B=2)
+```
+
+**Output**
+
+```text
+tensor([[1, 4],
+        [2, 5],
+        [3, 6]])
+```
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.Tensor.transpose.html)
+
+</details>
+
+<details>
+<summary><code>Tensor.flatten</code> — Merge a range of dimensions into one.</summary>
+
+**Signature**
+
+```python
+x.flatten(start_dim=0, end_dim=-1)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `start_dim` | `0` | First axis to merge. |
+| `end_dim` | `-1` | Last axis to merge, inclusive. |
+
+**Example**
+
+```python
+# Purpose: Flatten token features while preserving the batch axis.
+x = torch.arange(8).reshape(2, 2, 2)  # (B=2, T=2, C=2)
+print(x.flatten(start_dim=1))         # (B=2, T*C=4)
+```
+
+**Output**
+
+```text
+tensor([[0, 1, 2, 3],
+        [4, 5, 6, 7]])
+```
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.Tensor.flatten.html)
+
+</details>
+
+<details>
+<summary><code>torch.stack</code> — Join same-shaped tensors along a new dimension.</summary>
+
+**Signature**
+
+```python
+torch.stack(tensors, dim=0, *, out=None)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `tensors` | Required | Nonempty sequence of tensors with identical shapes. |
+| `dim` | `0` | Position of the new dimension. |
+| `out` | `None` | Optional destination tensor. |
+
+**Example**
+
+```python
+# Purpose: Combine two trajectories into a batch.
+a = torch.tensor([1, 2])  # (T=2,): first trajectory
+b = torch.tensor([3, 4])  # (T=2,): second trajectory
+print(torch.stack([a, b], dim=0))  # (B=2, T=2)
+```
+
+**Output**
+
+```text
+tensor([[1, 2],
+        [3, 4]])
+```
+
+stack creates an axis; cat extends an existing axis.
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.stack.html)
+
+</details>
+
+<details>
+<summary><code>torch.cat</code> — Concatenate tensors along an existing dimension.</summary>
+
+**Signature**
+
+```python
+torch.cat(tensors, dim=0, *, out=None)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `tensors` | Required | Tensors with matching shapes outside the concatenation axis. |
+| `dim` | `0` | Existing axis along which to concatenate. |
+| `out` | `None` | Optional destination tensor. |
+
+**Example**
+
+```python
+# Purpose: Append one sampled token to each sequence.
+tokens = torch.tensor([[1, 2], [3, 4]])  # (B=2, T=2)
+next_token = torch.tensor([[5], [6]])    # (B=2, 1)
+print(torch.cat([tokens, next_token], dim=1))  # (B=2, T=3)
+```
+
+**Output**
+
+```text
+tensor([[1, 2, 5],
+        [3, 4, 6]])
+```
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.cat.html)
+
+</details>
+
+<details>
+<summary><code>torch.repeat_interleave</code> — Repeat individual entries along a chosen axis.</summary>
+
+**Signature**
+
+```python
+torch.repeat_interleave(input, repeats, dim=None, *, output_size=None)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `input` | Required | Source tensor. |
+| `repeats` | Required | Integer repeat count or tensor of per-entry counts. |
+| `dim` | `None` | Axis to repeat; None flattens input first. |
+| `output_size` | `None` | Optional total output length along the repeated axis. |
+
+**Example**
+
+```python
+# Purpose: Repeat each KV-head identifier twice.
+heads = torch.tensor([0, 1])  # (H_KV=2,)
+print(torch.repeat_interleave(heads, repeats=2, dim=0))  # (H_Q=4,)
+```
+
+**Output**
+
+```text
+tensor([0, 0, 1, 1])
+```
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.repeat_interleave.html)
+
+</details>
 
 ## Numerical and reduction operations
 
-| Function / method | Status | What it does |
-|---|---|---|
-| `torch.exp` | ✅ | Applies the exponential function element-wise. |
-| `torch.log` | ✅ | Applies the natural logarithm element-wise. |
-| `torch.sqrt` | ✅ | Applies square root element-wise. |
-| `torch.clamp` | ✅ | Limits each value to given bounds; PPO clips importance ratios in its objective. |
-| `torch.minimum` | ✅ | Takes the element-wise minimum of two tensors; PPO uses it for its clipped surrogate. |
-| `Tensor.square` | ✅ | Squares every tensor element. |
-| `Tensor.mean` | ✅ | Computes a mean over selected dimensions. |
-| `Tensor.var` | ✅ | Computes variance over selected dimensions. |
-| `Tensor.sum` | ✅ | Computes a sum over selected dimensions. |
-| `torch.cumsum` | ✅ | Computes cumulative sums along a dimension. |
-| `torch.linalg.vector_norm` | ✅ | Computes vector norms along a selected dimension. |
-| `torch.isfinite` | ✅ | Checks whether values are finite rather than NaN or infinity. |
+<details>
+<summary><code>torch.exp</code> — Exponentiate each value.</summary>
+
+**Signature**
+
+```python
+torch.exp(input, *, out=None)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `input` | Required | Input tensor. |
+| `out` | `None` | Optional destination tensor. |
+
+**Example**
+
+```python
+# Purpose: Apply exp element by element.
+x = torch.tensor([0.0, 1.0, 2.0])  # (N=3,)
+print(torch.exp(x))
+```
+
+**Output**
+
+```text
+tensor([1.0000, 2.7183, 7.3891])
+```
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.exp.html)
+
+</details>
+
+<details>
+<summary><code>torch.log</code> — Take the natural logarithm of each value.</summary>
+
+**Signature**
+
+```python
+torch.log(input, *, out=None)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `input` | Required | Input tensor. |
+| `out` | `None` | Optional destination tensor. |
+
+**Example**
+
+```python
+# Purpose: Apply log element by element.
+x = torch.tensor([0.25, 0.5, 1.0])  # (N=3,)
+print(torch.log(x))
+```
+
+**Output**
+
+```text
+tensor([-1.3863, -0.6931,  0.0000])
+```
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.log.html)
+
+</details>
+
+<details>
+<summary><code>torch.sqrt</code> — Take the square root of each value.</summary>
+
+**Signature**
+
+```python
+torch.sqrt(input, *, out=None)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `input` | Required | Input tensor. |
+| `out` | `None` | Optional destination tensor. |
+
+**Example**
+
+```python
+# Purpose: Apply sqrt element by element.
+x = torch.tensor([1.0, 4.0, 9.0])  # (N=3,)
+print(torch.sqrt(x))
+```
+
+**Output**
+
+```text
+tensor([1., 2., 3.])
+```
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.sqrt.html)
+
+</details>
+
+<details>
+<summary><code>torch.clamp</code> — Limit each element to a lower and/or upper bound.</summary>
+
+**Signature**
+
+```python
+torch.clamp(input, min=None, max=None, *, out=None)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `input` | Required | Values to bound. |
+| `min` | `None` | Lower bound; scalar or tensor. |
+| `max` | `None` | Upper bound; scalar or tensor. |
+| `out` | `None` | Optional destination tensor. |
+
+**Example**
+
+```python
+# Purpose: Clip PPO importance ratios for the surrogate objective.
+ratios = torch.tensor([0.5, 1.0, 1.5])  # (T=3,)
+print(torch.clamp(ratios, min=0.8, max=1.2))
+```
+
+**Output**
+
+```text
+tensor([0.8000, 1.0000, 1.2000])
+```
+
+At least one bound is required. Clipping this tensor does not constrain the model parameters.
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.clamp.html)
+
+</details>
+
+<details>
+<summary><code>torch.minimum</code> — Take the element-wise smaller of two tensors.</summary>
+
+**Signature**
+
+```python
+torch.minimum(input, other, *, out=None)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `input` | Required | First tensor. |
+| `other` | Required | Second tensor; shapes must be broadcastable. |
+| `out` | `None` | Optional destination tensor. |
+
+**Example**
+
+```python
+# Purpose: Select the pessimistic PPO surrogate per action.
+raw = torch.tensor([3.0, -2.0])      # (T=2,)
+clipped = torch.tensor([2.4, -0.8])  # (T=2,)
+print(torch.minimum(raw, clipped))
+```
+
+**Output**
+
+```text
+tensor([ 2.4000, -2.0000])
+```
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.minimum.html)
+
+</details>
+
+<details>
+<summary><code>Tensor.square</code> — Square every element.</summary>
+
+**Signature**
+
+```python
+x.square()
+```
+
+**Parameters:** None.
+
+**Example**
+
+```python
+# Purpose: Compute squared prediction errors.
+errors = torch.tensor([-2.0, 3.0])  # (T=2,)
+print(errors.square())
+```
+
+**Output**
+
+```text
+tensor([4., 9.])
+```
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.Tensor.square.html)
+
+</details>
+
+<details>
+<summary><code>Tensor.mean</code> — Average values over selected dimensions.</summary>
+
+**Signature**
+
+```python
+x.mean(dim=None, keepdim=False, *, dtype=None)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `dim` | `None` | Axis or tuple of axes to reduce; None reduces all elements. |
+| `keepdim` | `False` | Retain reduced axes with size one. |
+| `dtype` | `None` | Optional dtype used before the reduction. |
+
+**Example**
+
+```python
+# Purpose: Average token scores separately for each sequence.
+scores = torch.tensor([[2.0, 4.0], [6.0, 8.0]])  # (B=2, T=2)
+print(scores.mean(dim=1, keepdim=True))          # (B=2, 1)
+```
+
+**Output**
+
+```text
+tensor([[3.],
+        [7.]])
+```
+
+An empty floating-point tensor has mean NaN; reject empty masks before reducing.
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.Tensor.mean.html)
+
+</details>
+
+<details>
+<summary><code>Tensor.var</code> — Measure variance over selected dimensions.</summary>
+
+**Signature**
+
+```python
+x.var(dim=None, *, correction=1, keepdim=False)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `dim` | `None` | Axis or axes to reduce; None reduces all elements. |
+| `correction` | `1` | Degrees-of-freedom correction; use 0 for population variance. |
+| `keepdim` | `False` | Retain reduced axes with size one. |
+
+**Example**
+
+```python
+# Purpose: Compute population variance, not sample variance.
+x = torch.tensor([1.0, 2.0, 3.0])  # (N=3,)
+print(x.var(correction=0))          # (): scalar
+```
+
+**Output**
+
+```text
+tensor(0.6667)
+```
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.Tensor.var.html)
+
+</details>
+
+<details>
+<summary><code>Tensor.sum</code> — Sum values over selected dimensions.</summary>
+
+**Signature**
+
+```python
+x.sum(dim=None, keepdim=False, dtype=None)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `dim` | `None` | Axis or axes to reduce; None sums all elements. |
+| `keepdim` | `False` | Retain reduced axes with size one. |
+| `dtype` | `None` | Optional dtype used before accumulation. |
+
+**Example**
+
+```python
+# Purpose: Total the rewards within each trajectory.
+rewards = torch.tensor([[0.0, 1.0], [0.0, 0.5]])  # (B=2, T=2)
+print(rewards.sum(dim=1))                         # (B=2,)
+```
+
+**Output**
+
+```text
+tensor([1.0000, 0.5000])
+```
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.Tensor.sum.html)
+
+</details>
+
+<details>
+<summary><code>torch.cumsum</code> — Compute cumulative sums along an axis.</summary>
+
+**Signature**
+
+```python
+torch.cumsum(input, dim, *, dtype=None, out=None)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `input` | Required | Source tensor. |
+| `dim` | Required | Axis along which to accumulate. |
+| `dtype` | `None` | Optional dtype used before accumulation. |
+| `out` | `None` | Optional destination tensor. |
+
+**Example**
+
+```python
+# Purpose: Build prefix sums.
+x = torch.tensor([1, 2, 3])  # (T=3,)
+print(torch.cumsum(x, dim=0))
+```
+
+**Output**
+
+```text
+tensor([1, 3, 6])
+```
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.cumsum.html)
+
+</details>
+
+<details>
+<summary><code>torch.linalg.vector_norm</code> — Compute a vector norm over chosen dimensions.</summary>
+
+**Signature**
+
+```python
+torch.linalg.vector_norm(x, ord=2, dim=None, keepdim=False,
+                         *, dtype=None, out=None)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `x` | Required | Floating-point or complex tensor. |
+| `ord` | `2` | Norm order; 2 is Euclidean and float('inf') takes the maximum magnitude. |
+| `dim` | `None` | Axis or axes treated as a vector; None flattens all dimensions. |
+| `keepdim` | `False` | Retain reduced axes with size one. |
+| `dtype` | `None` | Optional computation dtype. |
+| `out` | `None` | Optional destination tensor. |
+
+**Example**
+
+```python
+# Purpose: Measure the norm of each feature vector.
+x = torch.tensor([[3.0, 4.0], [5.0, 12.0]])  # (B=2, C=2)
+print(torch.linalg.vector_norm(x, dim=1))    # (B=2,)
+```
+
+**Output**
+
+```text
+tensor([ 5., 13.])
+```
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.linalg.vector_norm.html)
+
+</details>
+
+<details>
+<summary><code>torch.isfinite</code> — Test for values other than NaN or infinity.</summary>
+
+**Signature**
+
+```python
+torch.isfinite(input)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `input` | Required | Tensor to check. |
+
+**Example**
+
+```python
+# Purpose: Locate invalid numerical values.
+x = torch.tensor([1.0, float("nan"), float("inf")])  # (N=3,)
+print(torch.isfinite(x))
+```
+
+**Output**
+
+```text
+tensor([ True, False, False])
+```
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.isfinite.html)
+
+</details>
 
 ## Indexing, filtering, and comparison
 
-| Function / method | Status | What it does |
-|---|---|---|
-| `torch.maximum` | ✅ | Computes the element-wise maximum. |
-| `torch.any` | ✅ | Checks whether at least one Boolean condition is true. |
-| `torch.all` | ✅ | Checks whether all Boolean conditions are true. |
-| `torch.where` | ✅ | Selects values element-wise according to a Boolean condition. |
-| `Tensor.masked_fill` | ✅ | Replaces values where a Boolean mask is true. |
-| `torch.topk` | ✅ | Returns the largest or smallest k values and their original indices. |
-| `torch.sort` | ✅ | Sorts values and returns both sorted values and their original indices. |
-| `Tensor.scatter_` | ✅ | Writes source values into selected destination indices in-place. |
-| `torch.allclose` | ✅ | Checks approximate numerical equality between tensors. |
-| `torch.equal` | ✅ | Checks whether two tensors have the same shape and exactly equal elements. |
+<details>
+<summary><code>torch.maximum</code> — Take the element-wise larger of two tensors.</summary>
+
+**Signature**
+
+```python
+torch.maximum(input, other, *, out=None)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `input` | Required | First tensor. |
+| `other` | Required | Second tensor; shapes must be broadcastable. |
+| `out` | `None` | Optional destination tensor. |
+
+**Example**
+
+```python
+# Purpose: Compare two score vectors element by element.
+a = torch.tensor([-1.0, 3.0])  # (N=2,)
+b = torch.tensor([0.0, 2.0])   # (N=2,)
+print(torch.maximum(a, b))
+```
+
+**Output**
+
+```text
+tensor([0., 3.])
+```
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.maximum.html)
+
+</details>
+
+<details>
+<summary><code>torch.any</code> — Test whether at least one element is True.</summary>
+
+**Signature**
+
+```python
+torch.any(input, dim=None, keepdim=False, *, out=None)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `input` | Required | Boolean or numeric tensor; nonzero means True. |
+| `dim` | `None` | Axis or axes to reduce; None checks all elements. |
+| `keepdim` | `False` | Retain reduced axes with size one. |
+| `out` | `None` | Optional destination tensor. |
+
+**Example**
+
+```python
+# Purpose: Check each sequence's validity flags.
+mask = torch.tensor([[True, True], [True, False]])  # (B=2, T=2)
+print(torch.any(mask, dim=1))  # (B=2,)
+```
+
+**Output**
+
+```text
+tensor([True, True])
+```
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.any.html)
+
+</details>
+
+<details>
+<summary><code>torch.all</code> — Test whether every element is True.</summary>
+
+**Signature**
+
+```python
+torch.all(input, dim=None, keepdim=False, *, out=None)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `input` | Required | Boolean or numeric tensor; nonzero means True. |
+| `dim` | `None` | Axis or axes to reduce; None checks all elements. |
+| `keepdim` | `False` | Retain reduced axes with size one. |
+| `out` | `None` | Optional destination tensor. |
+
+**Example**
+
+```python
+# Purpose: Check each sequence's validity flags.
+mask = torch.tensor([[True, True], [True, False]])  # (B=2, T=2)
+print(torch.all(mask, dim=1))  # (B=2,)
+```
+
+**Output**
+
+```text
+tensor([ True, False])
+```
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.all.html)
+
+</details>
+
+<details>
+<summary><code>torch.where</code> — Choose between two values according to a Boolean condition.</summary>
+
+**Signature**
+
+```python
+torch.where(condition, input, other, *, out=None)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `condition` | Required | Boolean selection mask; shapes must be broadcastable. |
+| `input` | Required | Tensor or scalar selected where condition is True. |
+| `other` | Required | Tensor or scalar selected where condition is False. |
+| `out` | `None` | Optional destination tensor. |
+
+**Example**
+
+```python
+# Purpose: Keep valid action scores and replace padding with zero.
+scores = torch.tensor([0.7, 99.0, 0.4])  # (T=3,)
+mask = torch.tensor([True, False, True])
+print(torch.where(mask, scores, 0.0))
+```
+
+**Output**
+
+```text
+tensor([0.7000, 0.0000, 0.4000])
+```
+
+The one-argument overload `torch.where(condition)` returns indices instead of selected values.
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.where.html)
+
+</details>
+
+<details>
+<summary><code>Tensor.masked_fill</code> — Return a copy with selected entries replaced.</summary>
+
+**Signature**
+
+```python
+x.masked_fill(mask, value)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `mask` | Required | Broadcastable Boolean mask; True means replace. |
+| `value` | Required | Scalar replacement value. |
+
+**Example**
+
+```python
+# Purpose: Clear a padded action slot.
+x = torch.tensor([[1.0, 2.0, 3.0]])            # (B=1, T=3)
+padding = torch.tensor([[False, True, False]])
+print(x.masked_fill(padding, 0.0))
+```
+
+**Output**
+
+```text
+tensor([[1., 0., 3.]])
+```
+
+The mask direction is important: True entries are replaced, not retained.
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.Tensor.masked_fill.html)
+
+</details>
+
+<details>
+<summary><code>torch.topk</code> — Return the k largest or smallest values and their indices.</summary>
+
+**Signature**
+
+```python
+torch.topk(input, k, dim=None, largest=True, sorted=True, *, out=None)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `input` | Required | Source tensor. |
+| `k` | Required | Number of entries to select. |
+| `dim` | `None` | Selection axis; defaults to the last axis. |
+| `largest` | `True` | Select largest values; False selects smallest. |
+| `sorted` | `True` | Sort the selected values. |
+| `out` | `None` | Optional (values, indices) output buffers. |
+
+**Example**
+
+```python
+# Purpose: Find the two most likely vocabulary items.
+scores = torch.tensor([0.2, 0.5, 0.3])  # (V=3,)
+values, indices = torch.topk(scores, k=2)
+print(values)
+print(indices)
+```
+
+**Output**
+
+```text
+tensor([0.5000, 0.3000])
+tensor([1, 2])
+```
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.topk.html)
+
+</details>
+
+<details>
+<summary><code>torch.sort</code> — Sort values and return their original indices.</summary>
+
+**Signature**
+
+```python
+torch.sort(input, dim=-1, descending=False, *, stable=False, out=None)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `input` | Required | Source tensor. |
+| `dim` | `-1` | Axis to sort. |
+| `descending` | `False` | True sorts largest first. |
+| `stable` | `False` | Preserve original order among equal elements. |
+| `out` | `None` | Optional (values, indices) output buffers. |
+
+**Example**
+
+```python
+# Purpose: Rank vocabulary scores in descending order.
+scores = torch.tensor([0.3, 0.1, 0.2])  # (V=3,)
+values, indices = torch.sort(scores, descending=True)
+print(values)
+print(indices)
+```
+
+**Output**
+
+```text
+tensor([0.3000, 0.2000, 0.1000])
+tensor([0, 2, 1])
+```
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.sort.html)
+
+</details>
+
+<details>
+<summary><code>Tensor.scatter_</code> — Write source values into indexed positions in place.</summary>
+
+**Signature**
+
+```python
+x.scatter_(dim, index, src, *, reduce=None)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `dim` | Required | Destination axis along which index selects positions. |
+| `index` | Required | Integer destination indices. |
+| `src` | Required | Source tensor; a scalar-value overload is also available. |
+| `reduce` | None in docs; omit in call | Legacy 'add' or 'multiply' reduction; deprecated for tensor src. |
+
+**Example**
+
+```python
+# Purpose: Write two selected scores into a vocabulary-sized tensor.
+x = torch.zeros(1, 4)                  # (B=1, V=4)
+indices = torch.tensor([[1, 3]])       # (B=1, K=2)
+source = torch.tensor([[5.0, 6.0]])    # (B=1, K=2)
+x.scatter_(dim=1, index=indices, src=source)
+print(x)
+```
+
+**Output**
+
+```text
+tensor([[0., 5., 0., 6.]])
+```
+
+Omit reduce for ordinary writes; explicitly passing None is not accepted by every overload. Repeated indices can make ordinary writes nondeterministic.
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.Tensor.scatter_.html)
+
+</details>
+
+<details>
+<summary><code>torch.allclose</code> — Check approximate numerical equality.</summary>
+
+**Signature**
+
+```python
+torch.allclose(input, other, rtol=1e-5, atol=1e-8, equal_nan=False)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `input` | Required | Tensor to check. |
+| `other` | Required | Reference tensor. |
+| `rtol` | `1e-5` | Relative tolerance, scaled by the magnitude of other. |
+| `atol` | `1e-8` | Absolute tolerance. |
+| `equal_nan` | `False` | Treat NaNs at matching positions as equal. |
+
+**Example**
+
+```python
+# Purpose: Accept a small floating-point discrepancy.
+a = torch.tensor([1.000001])  # (N=1,)
+b = torch.tensor([1.0])       # (N=1,)
+print(torch.allclose(a, b, atol=1e-5))
+```
+
+**Output**
+
+```text
+True
+```
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.allclose.html)
+
+</details>
+
+<details>
+<summary><code>torch.equal</code> — Check identical shapes and element values without a tolerance.</summary>
+
+**Signature**
+
+```python
+torch.equal(input, other)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `input` | Required | First tensor. |
+| `other` | Required | Second tensor. |
+
+**Example**
+
+```python
+# Purpose: Verify an unchanged rollout snapshot.
+a = torch.tensor([1, 2, 3])  # (T=3,)
+b = a.clone()
+print(torch.equal(a, b))
+```
+
+**Output**
+
+```text
+True
+```
+
+This compares values and shapes, not dtype identity; NaNs are not equal.
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.equal.html)
+
+</details>
 
 ## Probability and sampling
 
-| Function / method | Status | What it does |
-|---|---|---|
-| `torch.softmax` / `F.softmax` | ✅ | Converts logits into a normalized probability distribution. |
-| `torch.log_softmax` / `F.log_softmax` | ✅ | Converts logits into numerically stable log-probabilities along a chosen dimension. |
-| `F.cross_entropy` | ✅ | Computes cross-entropy loss from logits and class targets. |
-| `torch.multinomial` | ✅ | Samples indices according to categorical weights or probabilities. |
-| `torch.argmax` | ✅ | Returns the index of the largest value. |
+<details>
+<summary><code>torch.softmax / F.softmax</code> — Convert logits into normalized probabilities.</summary>
+
+**Signature**
+
+```python
+torch.softmax(input, dim, *, dtype=None)
+F.softmax(input, dim=None, _stacklevel=3, dtype=None)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `input` | Required | Unnormalized logits. |
+| `dim` | Required for torch; None for F | Normalization axis; always provide it explicitly. |
+| `dtype` | `None` | Optional dtype used before computing probabilities. |
+| `_stacklevel` | 3; F only | Internal warning stack depth; normally leave unchanged. |
+
+**Example**
+
+```python
+# Purpose: Normalize across vocabulary tokens, not sequences.
+logits = torch.tensor([[1.0, 2.0, 3.0]])  # (B=1, V=3)
+print(torch.softmax(logits, dim=-1))
+print(F.softmax(logits, dim=-1))  # Equivalent alias
+```
+
+**Output**
+
+```text
+tensor([[0.0900, 0.2447, 0.6652]])
+tensor([[0.0900, 0.2447, 0.6652]])
+```
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.nn.functional.softmax.html)
+
+</details>
+
+<details>
+<summary><code>torch.log_softmax / F.log_softmax</code> — Convert logits into numerically stable log-probabilities.</summary>
+
+**Signature**
+
+```python
+torch.log_softmax(input, dim, *, dtype=None)
+F.log_softmax(input, dim=None, _stacklevel=3, dtype=None)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `input` | Required | Unnormalized logits. |
+| `dim` | Required for torch; None for F | Normalization axis; always provide it explicitly. |
+| `dtype` | `None` | Optional dtype used before computing probabilities. |
+| `_stacklevel` | 3; F only | Internal warning stack depth; normally leave unchanged. |
+
+**Example**
+
+```python
+# Purpose: Normalize across vocabulary tokens, not sequences.
+logits = torch.tensor([[1.0, 2.0, 3.0]])  # (B=1, V=3)
+print(torch.log_softmax(logits, dim=-1))
+print(F.log_softmax(logits, dim=-1))  # Equivalent alias
+```
+
+**Output**
+
+```text
+tensor([[-2.4076, -1.4076, -0.4076]])
+tensor([[-2.4076, -1.4076, -0.4076]])
+```
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.nn.functional.log_softmax.html)
+
+</details>
+
+<details>
+<summary><code>F.cross_entropy</code> — Compute classification loss directly from logits.</summary>
+
+**Signature**
+
+```python
+F.cross_entropy(input, target, weight=None, size_average=None,
+                ignore_index=-100, reduce=None, reduction="mean",
+                label_smoothing=0.0)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `input` | Required | Logits; e.g., (B, V) or (B, V, ...). |
+| `target` | Required | Class indices or same-shaped class probabilities. |
+| `weight` | `None` | Optional rescaling weight per class. |
+| `size_average` | `None` | Deprecated; use reduction instead. |
+| `ignore_index` | `-100` | Ignore this label when target contains class indices. |
+| `reduce` | `None` | Deprecated; use reduction instead. |
+| `reduction` | `"mean"` | 'none', 'mean', or 'sum'. |
+| `label_smoothing` | `0.0` | Mix targets with a uniform distribution. |
+
+**Example**
+
+```python
+# Purpose: Score two next-token predictions against target IDs.
+logits = torch.tensor([[1.0, 2.0, 3.0], [2.0, 1.0, 0.0]])
+# (B=2, V=3): sequences, vocabulary logits
+targets = torch.tensor([2, 0])  # (B=2,): correct token IDs
+print(F.cross_entropy(logits, targets))  # (): mean loss
+```
+
+**Output**
+
+```text
+tensor(0.4076)
+```
+
+Pass logits, not already-softmaxed probabilities.
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.nn.functional.cross_entropy.html)
+
+</details>
+
+<details>
+<summary><code>torch.multinomial</code> — Sample category indices from nonnegative weights.</summary>
+
+**Signature**
+
+```python
+torch.multinomial(input, num_samples, replacement=False,
+                  *, generator=None, out=None)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `input` | Required | Finite nonnegative weights; each sampled row needs a positive sum. |
+| `num_samples` | Required | Number of draws per row. |
+| `replacement` | `False` | Allow repeated categories within a row when True. |
+| `generator` | `None` | Optional random-number generator. |
+| `out` | `None` | Optional integer output tensor. |
+
+**Example**
+
+```python
+# Purpose: Sample token IDs from a categorical policy.
+rng = torch.Generator().manual_seed(7)
+probs = torch.tensor([[0.1, 0.2, 0.7]])  # (B=1, V=3)
+actions = torch.multinomial(probs, 4, replacement=True, generator=rng)
+print(actions)  # (B=1, K=4): sampled token IDs
+```
+
+**Output**
+
+```text
+tensor([[1, 1, 2, 2]])
+```
+
+Weights need not sum to one. Gradients do not flow through the sampled integer indices.
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.multinomial.html)
+
+</details>
+
+<details>
+<summary><code>torch.argmax</code> — Return the index of the largest value.</summary>
+
+**Signature**
+
+```python
+torch.argmax(input, dim=None, keepdim=False)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `input` | Required | Source scores. |
+| `dim` | `None` | Axis to search; None flattens all dimensions. |
+| `keepdim` | `False` | Retain the selected axis with size one. |
+
+**Example**
+
+```python
+# Purpose: Choose the most likely token greedily.
+logits = torch.tensor([[0.1, 0.9, 0.3]])  # (B=1, V=3)
+print(torch.argmax(logits, dim=-1, keepdim=True))  # (B=1, 1)
+```
+
+**Output**
+
+```text
+tensor([[1]])
+```
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.argmax.html)
+
+</details>
 
 ## Autograd and parameter handling
 
-| Function / method | Status | What it does |
-|---|---|---|
-| `Tensor.backward` | ✅ | Runs reverse-mode automatic differentiation from a scalar loss. |
-| `torch.autograd.grad` | ✅ | Computes gradients of selected outputs with respect to selected inputs without relying on parameter `.grad` accumulation. |
-| `Tensor.detach` | ✅ | Returns a tensor detached from the autograd graph. |
-| `Tensor.clone` | ✅ | Creates a separate tensor containing copied values. |
-| `torch.no_grad` | ✅ | Disables autograd graph construction inside a context. |
+<details>
+<summary><code>Tensor.backward</code> — Accumulate gradients in leaf tensors connected to this output.</summary>
+
+**Signature**
+
+```python
+x.backward(gradient=None, retain_graph=None, create_graph=False, inputs=None)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `gradient` | `None` | Upstream gradient; required for most nonscalar outputs. |
+| `retain_graph` | `None` | Keep the graph; defaults to create_graph. |
+| `create_graph` | `False` | Build a graph of derivatives for higher-order differentiation. |
+| `inputs` | `None` | Optional tensors whose .grad fields receive accumulated gradients. |
+
+**Example**
+
+```python
+# Purpose: Differentiate a scalar loss with respect to two weights.
+x = torch.tensor([1.0, 2.0], requires_grad=True)  # (C=2,)
+loss = x.square().sum()  # (): scalar loss
+loss.backward()
+print(x.grad)
+```
+
+**Output**
+
+```text
+tensor([2., 4.])
+```
+
+Gradients accumulate across backward calls unless cleared.
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.Tensor.backward.html)
+
+</details>
+
+<details>
+<summary><code>torch.autograd.grad</code> — Return requested gradients without accumulating into .grad.</summary>
+
+**Signature**
+
+```python
+torch.autograd.grad(outputs, inputs, grad_outputs=None, retain_graph=None,
+                    create_graph=False, only_inputs=True, allow_unused=None,
+                    is_grads_batched=False, materialize_grads=False)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `outputs` | Required | Differentiated tensor or sequence of tensors. |
+| `inputs` | Required | Tensor or sequence to differentiate against; newer versions also accept named dictionaries. |
+| `grad_outputs` | `None` | Upstream vectors for the outputs. |
+| `retain_graph` | `None` | Keep the graph; defaults to create_graph. |
+| `create_graph` | `False` | Track derivative computations for higher-order gradients. |
+| `only_inputs` | `True` | Deprecated and ignored. |
+| `allow_unused` | `None` | Allow disconnected inputs; defaults to materialize_grads. |
+| `is_grads_batched` | `False` | First grad_outputs axis indexes a batch of vector-Jacobian products. |
+| `materialize_grads` | `False` | Return zeros instead of None for allowed unused inputs. |
+
+**Example**
+
+```python
+# Purpose: Inspect a gradient without changing x.grad.
+x = torch.tensor([1.0, 2.0], requires_grad=True)  # (C=2,)
+(gradient,) = torch.autograd.grad(x.square().sum(), x)
+print(gradient)
+print(x.grad)
+```
+
+**Output**
+
+```text
+tensor([2., 4.])
+None
+```
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.autograd.grad.html)
+
+</details>
+
+<details>
+<summary><code>Tensor.detach</code> — Remove the autograd connection while sharing underlying storage.</summary>
+
+**Signature**
+
+```python
+x.detach()
+```
+
+**Parameters:** None.
+
+**Example**
+
+```python
+# Purpose: Freeze a computed value for use as a learning target.
+x = torch.tensor([1.0, 2.0], requires_grad=True)  # (T=2,)
+target = (2 * x).detach()
+print(target)
+print(target.requires_grad)
+```
+
+**Output**
+
+```text
+tensor([2., 4.])
+False
+```
+
+Use `x.detach().clone()` when the frozen snapshot also needs independent storage.
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.Tensor.detach.html)
+
+</details>
+
+<details>
+<summary><code>Tensor.clone</code> — Copy tensor storage while preserving the gradient connection.</summary>
+
+**Signature**
+
+```python
+x.clone(*, memory_format=torch.preserve_format)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `memory_format` | `torch.preserve_format` | Memory arrangement for the copy. |
+
+**Example**
+
+```python
+# Purpose: Copy values so an in-place edit cannot change the original.
+x = torch.tensor([1.0, 2.0])  # (T=2,)
+y = x.clone()
+y[0] = 9.0
+print(x)
+print(y)
+```
+
+**Output**
+
+```text
+tensor([1., 2.])
+tensor([9., 2.])
+```
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.Tensor.clone.html)
+
+</details>
+
+<details>
+<summary><code>torch.no_grad</code> — Disable reverse-mode autograd recording in a block or decorated function.</summary>
+
+**Signature**
+
+```python
+torch.no_grad()
+```
+
+**Parameters:** None.
+
+**Example**
+
+```python
+# Purpose: Compute collection-time values without building a graph.
+x = torch.tensor([1.0], requires_grad=True)  # (N=1,)
+with torch.no_grad():
+    frozen = 2 * x
+print(frozen)
+print(frozen.requires_grad)
+```
+
+**Output**
+
+```text
+tensor([2.])
+False
+```
+
+Does not call model.eval(), clear existing gradients, or override explicit requires_grad on factory-created tensors.
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.no_grad.html)
+
+</details>
 
 ## Optimization and training
 
-| Function / method | Status | What it does |
-|---|---|---|
-| `torch.optim.SGD` | ✅ | PyTorch stochastic-gradient-descent optimizer used after manually deriving SGD in an earlier lesson. |
-| `torch.optim.AdamW` | ✅ | PyTorch AdamW optimizer used for the end-to-end pretraining experiment. |
-| `Optimizer.zero_grad` | ✅ | Clears or resets parameter gradients before the next backward pass. |
-| `Optimizer.step` | ✅ | Applies one optimizer update using the currently accumulated gradients. |
-| `torch.nn.utils.clip_grad_norm_` | ✅ | Clips the global parameter-gradient norm in-place to limit unusually large training updates. |
+<details>
+<summary><code>torch.optim.SGD</code> — Update trainable parameters with stochastic gradient descent.</summary>
+
+**Signature**
+
+```python
+torch.optim.SGD(params, lr=0.001, momentum=0, dampening=0,
+                weight_decay=0, nesterov=False, *, maximize=False,
+                foreach=None, differentiable=False, fused=None)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `params` | Required | Parameter iterable or parameter-group dictionaries. |
+| `lr` | `0.001` | Learning rate. |
+| `momentum` | `0` | Momentum coefficient. |
+| `dampening` | `0` | Dampening of new gradient contributions to momentum. |
+| `weight_decay` | `0` | L2 penalty coefficient. |
+| `nesterov` | `False` | Nesterov momentum; requires positive momentum and zero dampening. |
+| `maximize` | `False` | Maximize rather than minimize the objective. |
+| `foreach` | `None` | Use tensor-list kernels when supported. |
+| `differentiable` | `False` | Record optimizer operations for higher-order gradients. |
+| `fused` | `None` | Select a fused implementation when supported. |
+
+**Example**
+
+```python
+# Purpose: Take one gradient-descent step on a scalar weight.
+p = nn.Parameter(torch.tensor([1.0]))  # (N=1,)
+optimizer = torch.optim.SGD([p], lr=0.1)
+optimizer.zero_grad(set_to_none=True)
+p.square().sum().backward()
+optimizer.step()
+print(p.detach())
+```
+
+**Output**
+
+```text
+tensor([0.8000])
+```
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.optim.SGD.html)
+
+</details>
+
+<details>
+<summary><code>torch.optim.AdamW</code> — Apply adaptive updates with decoupled weight decay.</summary>
+
+**Signature**
+
+```python
+torch.optim.AdamW(params, lr=0.001, betas=(0.9, 0.999), eps=1e-8,
+                  weight_decay=0.01, amsgrad=False, *, maximize=False,
+                  foreach=None, capturable=False, differentiable=False,
+                  fused=None)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `params` | Required | Parameter iterable or parameter-group dictionaries. |
+| `lr` | `0.001` | Learning rate. |
+| `betas` | (0.9, 0.999) | Decay rates for first and second gradient moments. |
+| `eps` | `1e-8` | Numerical-stability term in the update denominator. |
+| `weight_decay` | `0.01` | Decoupled weight-decay coefficient. |
+| `amsgrad` | `False` | Use the maximum historical second-moment estimate. |
+| `maximize` | `False` | Maximize rather than minimize the objective. |
+| `foreach` | `None` | Use tensor-list kernels when supported. |
+| `capturable` | `False` | Support graph capture on compatible devices. |
+| `differentiable` | `False` | Record optimizer operations for higher-order gradients. |
+| `fused` | `None` | Select a fused implementation when supported. |
+
+**Example**
+
+```python
+# Purpose: Take one adaptive update without weight decay.
+p = nn.Parameter(torch.tensor([1.0]))  # (N=1,)
+optimizer = torch.optim.AdamW([p], lr=0.1, weight_decay=0.0)
+optimizer.zero_grad(set_to_none=True)
+p.square().sum().backward()
+optimizer.step()
+print(p.detach())
+```
+
+**Output**
+
+```text
+tensor([0.9000])
+```
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.optim.AdamW.html)
+
+</details>
+
+<details>
+<summary><code>Optimizer.zero_grad</code> — Clear gradients before the next independent backward pass.</summary>
+
+**Signature**
+
+```python
+optimizer.zero_grad(set_to_none=True)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `set_to_none` | `True` | True removes gradient tensors; False zeros existing gradients. |
+
+**Example**
+
+```python
+# Purpose: Clear a gradient that was accumulated by backward.
+p = nn.Parameter(torch.tensor([2.0]))  # (N=1,)
+optimizer = torch.optim.SGD([p], lr=0.1)
+p.square().sum().backward()
+print(p.grad)
+optimizer.zero_grad(set_to_none=True)
+print(p.grad)
+```
+
+**Output**
+
+```text
+tensor([4.])
+None
+```
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.optim.Optimizer.zero_grad.html)
+
+</details>
+
+<details>
+<summary><code>Optimizer.step</code> — Update parameters using their currently stored gradients.</summary>
+
+**Signature**
+
+```python
+optimizer.step(closure=None)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `closure` | `None` | Optional callable that recomputes loss and gradients; optimizer-specific. |
+
+**Example**
+
+```python
+# Purpose: Apply an already-computed SGD gradient.
+p = nn.Parameter(torch.tensor([1.0]))  # (N=1,)
+optimizer = torch.optim.SGD([p], lr=0.1)
+p.square().sum().backward()
+optimizer.step()
+print(p.detach())
+```
+
+**Output**
+
+```text
+tensor([0.8000])
+```
+
+Signature shown for SGD/AdamW. Other optimizer subclasses can have different requirements.
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.optim.Optimizer.step.html)
+
+</details>
+
+<details>
+<summary><code>torch.nn.utils.clip_grad_norm_</code> — Limit the joint norm of parameter gradients in place.</summary>
+
+**Signature**
+
+```python
+torch.nn.utils.clip_grad_norm_(parameters, max_norm, norm_type=2.0,
+                               error_if_nonfinite=False, foreach=None)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `parameters` | Required | Parameter tensor or iterable with .grad values. |
+| `max_norm` | Required | Maximum total gradient norm. |
+| `norm_type` | `2.0` | Norm order; float('inf') uses the maximum absolute entry. |
+| `error_if_nonfinite` | `False` | Raise on a nonfinite total norm. |
+| `foreach` | `None` | Select tensor-list kernels when supported. |
+
+**Example**
+
+```python
+# Purpose: Reduce a gradient vector's norm from ten to one.
+p = nn.Parameter(torch.tensor([3.0, 4.0]))  # (C=2,)
+p.square().sum().backward()  # Gradient is [6, 8].
+before = torch.nn.utils.clip_grad_norm_(
+    [p], max_norm=1.0, error_if_nonfinite=True
+)
+print(before)
+print(p.grad)
+```
+
+**Output**
+
+```text
+tensor(10.)
+tensor([0.6000, 0.8000])
+```
+
+Returns the norm BEFORE clipping. This is different from PPO probability-ratio clipping.
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.nn.utils.clip_grad_norm_.html)
+
+</details>
 
 ## Neural-network utilities
 
-| Function / method | Status | What it does |
-|---|---|---|
-| `nn.Embedding` | ✅ | Maps integer token IDs to learned embedding vectors. |
-| `nn.Linear` | ✅ | Applies an affine transformation to the final feature dimension. |
-| `nn.Parameter` | ✅ | Registers a tensor as a trainable model parameter. |
-| `nn.init.zeros_` | ✅ | Fills a parameter tensor with zeros in-place; used to initialize tabular actor/critic parameters deliberately. |
-| `nn.ModuleList` | ✅ | Stores and registers a list of child modules. |
-| `nn.RMSNorm` | ✅ | Applies RMS normalization over the final feature dimension. |
-| `F.elu` | ✅ | Applies the ELU activation; used after deriving ELU(x) + 1 manually for the positive linear-attention feature map. |
-| `F.gelu` | ✅ | Applies the GELU activation. |
-| `F.silu` | ✅ | Applies the SiLU / Swish activation. |
-| `F.scaled_dot_product_attention` | ✅ | Computes scaled dot-product attention using an optimized PyTorch primitive. |
+<details>
+<summary><code>nn.Embedding</code> — Look up a learned vector for each integer token ID.</summary>
 
-## Lesson 13 — Generation additions
+**Signature**
+
+```python
+nn.Embedding(num_embeddings, embedding_dim, padding_idx=None,
+             max_norm=None, norm_type=2.0, scale_grad_by_freq=False,
+             sparse=False, _weight=None, _freeze=False,
+             device=None, dtype=None)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `num_embeddings` | Required | Number of rows, usually vocabulary size V. |
+| `embedding_dim` | Required | Vector width C. |
+| `padding_idx` | `None` | Row excluded from ordinary gradient updates. |
+| `max_norm` | `None` | Optional row-norm limit, applied during forward. |
+| `norm_type` | `2.0` | Norm used with max_norm. |
+| `scale_grad_by_freq` | `False` | Divide updates by token frequency within the batch. |
+| `sparse` | `False` | Produce sparse weight gradients. |
+| `_weight` | `None` | Internal constructor option for initial weights. |
+| `_freeze` | `False` | Internal constructor option to disable weight gradients. |
+| `device` | `None` | Parameter device. |
+| `dtype` | `None` | Parameter dtype. |
+
+**Example**
+
+```python
+# Purpose: Retrieve two token vectors from a known embedding table.
+embedding = nn.Embedding(3, 2)  # (V=3, C=2): weight shape
+with torch.no_grad():
+    embedding.weight.copy_(torch.tensor([[0., 0.], [1., 2.], [3., 4.]]))
+tokens = torch.tensor([[1, 2]])  # (B=1, T=2)
+print(embedding(tokens).detach())  # (B=1, T=2, C=2)
+```
+
+**Output**
+
+```text
+tensor([[[1., 2.],
+         [3., 4.]]])
+```
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.nn.Embedding.html)
+
+</details>
+
+<details>
+<summary><code>nn.Linear</code> — Project the final feature dimension with an affine transformation.</summary>
+
+**Signature**
+
+```python
+nn.Linear(in_features, out_features, bias=True, device=None, dtype=None)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `in_features` | Required | Input feature width. |
+| `out_features` | Required | Output feature width. |
+| `bias` | `True` | Learn an additive output bias. |
+| `device` | `None` | Parameter device. |
+| `dtype` | `None` | Parameter dtype. |
+
+**Example**
+
+```python
+# Purpose: Project three input features into two outputs.
+head = nn.Linear(3, 2, bias=False)
+with torch.no_grad():
+    head.weight.copy_(torch.tensor([[1., 0., 0.], [0., 1., 1.]]))
+x = torch.tensor([[1., 2., 3.]])  # (B=1, C_in=3)
+print(head(x).detach())           # (B=1, C_out=2)
+```
+
+**Output**
+
+```text
+tensor([[1., 5.]])
+```
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.nn.Linear.html)
+
+</details>
+
+<details>
+<summary><code>nn.Parameter</code> — Register a tensor as a model parameter when assigned to a module.</summary>
+
+**Signature**
+
+```python
+nn.Parameter(data=None, requires_grad=True)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `data` | `None` | Initial tensor values. |
+| `requires_grad` | `True` | Enable optimization through gradient recording. |
+
+**Example**
+
+```python
+# Purpose: Register a custom trainable scale vector.
+model = nn.Module()
+model.scale = nn.Parameter(torch.ones(2))  # (C=2,)
+print(list(dict(model.named_parameters())))
+print(model.scale.requires_grad)
+```
+
+**Output**
+
+```text
+['scale']
+True
+```
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.nn.Parameter.html)
+
+</details>
+
+<details>
+<summary><code>nn.init.zeros_</code> — Fill a tensor with zeros in place without recording initialization gradients.</summary>
+
+**Signature**
+
+```python
+nn.init.zeros_(tensor)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `tensor` | Required | Tensor or parameter to initialize in place. |
+
+**Example**
+
+```python
+# Purpose: Initialize a neutral value-head weight vector.
+weight = nn.Parameter(torch.tensor([[2.0, -3.0]]))  # (1, C=2)
+nn.init.zeros_(weight)
+print(weight.detach())
+```
+
+**Output**
+
+```text
+tensor([[0., 0.]])
+```
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/nn.init.html#torch.nn.init.zeros_)
+
+</details>
+
+<details>
+<summary><code>nn.ModuleList</code> — Store child modules while registering their parameters.</summary>
+
+**Signature**
+
+```python
+nn.ModuleList(modules=None)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `modules` | `None` | Iterable of child modules; omitted means an empty collection. |
+
+**Example**
+
+```python
+# Purpose: Register two layers as a reusable stack.
+layers = nn.ModuleList([nn.Linear(2, 2), nn.Linear(2, 1)])
+print(layers)
+```
+
+**Output**
+
+```text
+ModuleList(
+  (0): Linear(in_features=2, out_features=2, bias=True)
+  (1): Linear(in_features=2, out_features=1, bias=True)
+)
+```
+
+ModuleList stores modules; the enclosing model still defines how to run them.
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.nn.ModuleList.html)
+
+</details>
+
+<details>
+<summary><code>nn.RMSNorm</code> — Normalize trailing features by their root-mean-square magnitude.</summary>
+
+**Signature**
+
+```python
+nn.RMSNorm(normalized_shape, eps=None, elementwise_affine=True,
+           device=None, dtype=None)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `normalized_shape` | Required | Trailing dimension size or shape to normalize. |
+| `eps` | `None` | Stability term; None uses machine epsilon for the input dtype. |
+| `elementwise_affine` | `True` | Learn one scale per normalized element. |
+| `device` | `None` | Parameter device. |
+| `dtype` | `None` | Parameter dtype. |
+
+**Example**
+
+```python
+# Purpose: Normalize a two-feature vector without a learned scale.
+norm = nn.RMSNorm(2, eps=1e-5, elementwise_affine=False)
+x = torch.tensor([[3.0, 4.0]])  # (B=1, C=2)
+print(norm(x))
+```
+
+**Output**
+
+```text
+tensor([[0.8485, 1.1314]])
+```
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.nn.RMSNorm.html)
+
+</details>
+
+<details>
+<summary><code>F.elu</code> — Keep positive values and apply an exponential branch to negative values.</summary>
+
+**Signature**
+
+```python
+F.elu(input, alpha=1.0, inplace=False)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `input` | Required | Activation tensor. |
+| `alpha` | `1.0` | Scale of the negative branch. |
+| `inplace` | `False` | Overwrite input when True. |
+
+**Example**
+
+```python
+# Purpose: Apply ELU to negative, zero, and positive inputs.
+x = torch.tensor([-1.0, 0.0, 1.0])  # (C=3,)
+print(F.elu(x))
+```
+
+**Output**
+
+```text
+tensor([-0.6321,  0.0000,  1.0000])
+```
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.nn.functional.elu.html)
+
+</details>
+
+<details>
+<summary><code>F.gelu</code> — Apply the Gaussian error linear activation.</summary>
+
+**Signature**
+
+```python
+F.gelu(input, approximate="none")
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `input` | Required | Activation tensor. |
+| `approximate` | `"none"` | 'none' uses the erf form; 'tanh' uses an approximation. |
+
+**Example**
+
+```python
+# Purpose: Apply the common tanh approximation to GELU.
+x = torch.tensor([-1.0, 0.0, 1.0])  # (C=3,)
+print(F.gelu(x, approximate="tanh"))
+```
+
+**Output**
+
+```text
+tensor([-0.1588,  0.0000,  0.8412])
+```
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.nn.functional.gelu.html)
+
+</details>
+
+<details>
+<summary><code>F.silu</code> — Multiply each input by its sigmoid gate.</summary>
+
+**Signature**
+
+```python
+F.silu(input, inplace=False)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `input` | Required | Activation tensor. |
+| `inplace` | `False` | Overwrite input when True. |
+
+**Example**
+
+```python
+# Purpose: Apply the activation used inside SwiGLU.
+x = torch.tensor([-1.0, 0.0, 1.0])  # (C=3,)
+print(F.silu(x))
+```
+
+**Output**
+
+```text
+tensor([-0.2689,  0.0000,  0.7311])
+```
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.nn.functional.silu.html)
+
+</details>
+
+<details>
+<summary><code>F.scaled_dot_product_attention</code> — Compute scaled attention over keys and values.</summary>
+
+**Signature**
+
+```python
+F.scaled_dot_product_attention(query, key, value, attn_mask=None,
+                               dropout_p=0.0, is_causal=False,
+                               scale=None, enable_gqa=False)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `query` | Required | Query vectors, e.g. (B, H_Q, T_Q, D). |
+| `key` | Required | Key vectors, e.g. (B, H_KV, T_K, D). |
+| `value` | Required | Value vectors, e.g. (B, H_KV, T_K, D_V). |
+| `attn_mask` | `None` | Broadcastable Boolean or additive mask; Boolean True means allowed. |
+| `dropout_p` | `0.0` | Attention dropout probability; explicitly use zero during evaluation. |
+| `is_causal` | `False` | Apply a causal mask; do not combine with attn_mask in this interface. |
+| `scale` | `None` | Score multiplier; None uses 1 / sqrt(D). |
+| `enable_gqa` | `False` | Enable grouped-query attention when head counts/backends support it. |
+
+**Example**
+
+```python
+# Purpose: Show causal attention with uniform scores over available keys.
+q = torch.zeros(1, 1, 2, 2)  # (B=1, H=1, T=2, D=2)
+k = torch.zeros_like(q)
+v = torch.tensor([[[[10.0, 0.0], [0.0, 20.0]]]])
+y = F.scaled_dot_product_attention(q, k, v, is_causal=True)
+print(y)  # First token sees itself; second averages both values.
+```
+
+**Output**
+
+```text
+tensor([[[[10.,  0.],
+          [ 5., 10.]]]])
+```
+
+Dropout follows dropout_p, not the parent module's train/eval flag. scale and enable_gqa are keyword-only.
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.nn.functional.scaled_dot_product_attention.html)
+
+</details>
+
+## Learning history
+
+<details>
+<summary>Lesson notes and maintenance rules</summary>
+
+### Maintenance
+
+Keep each new entry in the same format: one-line purpose, signature, one row per parameter, one common example, and its captured output. Explain important tensor dimensions and distinguish in-place operations. Keep optional/internal arguments in the reference table, not in the common example unless relevant.
+
+**Status:** Understood means explained and used deliberately; Introduced means encountered but still under review. The existing 68 entries retain their Understood status.
+
+### Lesson 13 — Generation additions
 
 The following functions were introduced or revisited during autoregressive sampling:
 
@@ -139,34 +2706,30 @@ The following functions were introduced or revisited during autoregressive sampl
 
 These functions should be understood before the generation notebook moves on to KV caching.
 
-
-## Lesson 14 — GQA additions
+### Lesson 14 — GQA additions
 
 - `torch.repeat_interleave` — introduced after first implementing KV-head expansion manually.
 
-
-## Lesson 15 — Linear-attention additions
+### Lesson 15 — Linear-attention additions
 
 - `F.elu` — used in reusable source only after the notebook derived the positive feature map manually.
 - `torch.cumsum` — reused to construct causal prefix states for parallel linear attention.
 
-
-## Lesson 19 — Policy-gradient additions
+### Lesson 19 — Policy-gradient additions
 
 - `torch.log_softmax` — used to keep sampled-action log-probabilities differentiable and numerically stable.
 - `torch.autograd.grad` — used to inspect score-function gradients such as `d log pi(a) / d theta` directly.
 - `torch.multinomial` — revisited as categorical action sampling; the sampled index is discrete and gradients do not pass through the sampling operation.
 - `Tensor.detach` — revisited to separate stochastic sampling / credit weights from the differentiable log-probability path.
 
-
-## Lesson 20 — Actor-critic and GAE additions
+### Lesson 20 — Actor-critic and GAE additions
 
 - `nn.init.zeros_` — used to initialize the tabular actor and critic at a known neutral starting point; the trailing underscore indicates an in-place operation.
 - `torch.no_grad` — revisited to freeze bootstrap targets and rollout-time measurements during critic/actor updates.
 - `Tensor.detach` — revisited to keep TD/advantage credit signals fixed when optimizing the actor.
 - `torch.zeros_like` — reused to allocate GAE advantage tensors with matching shape, dtype, and device.
 
-## Lesson 21A — PPO from Scratch additions
+### Lesson 21A — PPO from Scratch additions
 
 - `torch.clamp` and `torch.minimum` — construct the advantage-aware clipped PPO surrogate; clipping is not a hard constraint on updated policy probabilities.
 - `torch.randperm` — shuffle complete trajectory indices before selecting aligned sequence minibatches.
@@ -177,980 +2740,10 @@ These functions should be understood before the generation notebook moves on to 
 
 The RL primitives extracted after Lesson 21A live in `src/llmfp/rl/`; their regression tests use only the Python standard library and PyTorch.
 
----
+</details>
 
-## API Reference — Examples and Parameter Guides
+## Reference notes
 
-This is the detailed companion to the quick-index tables above. Every API entry includes the call signature, descriptions of its parameters (including optional arguments), one runnable usage example, and shape/semantic notes. **All examples assume the following imports:**
+The API selection, categories, and lesson history come from the previous tracker. Parameter descriptions have been separated into rows, malformed text has been repaired, and signatures use explicit overload notes where needed. The linked PyTorch documentation and the locally installed API were consulted for ambiguous signatures; this is not an exhaustive audit of every optional-argument combination.
 
-```python
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-```
-
-Defaults can evolve between PyTorch releases; the examples target the repository's PyTorch API. A displayed `out=None` or `generator=None` is an explicit demonstration of an optional argument. Some overloads or mutually exclusive options require separate calls; parameter descriptions cover their intended meaning, and examples choose one valid combination. `Tensor` denotes a method on an existing tensor and `Optimizer` denotes an optimizer instance. Individual examples are meant to be run with their included local setup lines after the imports.
-
-### A. Tensor creation and shape operations
-
-#### `torch.tensor`
-
-**Signature:** `torch.tensor(data, *, dtype=None, device=None, requires_grad=False, pin_memory=False)`
-
-**Parameters:** `data` — scalar, list or array-like source; `dtype` — requested element type (otherwise inferred); `device` — CPU/CUDA destination; `requires_grad` — record floating/complex gradients; `pin_memory` — allocate pinned CPU memory.
-
-```python
-x = torch.tensor(data=[[1., 2.], [3., 4.]], dtype=torch.float32,
-                 device="cpu", requires_grad=False, pin_memory=False)
-```
-
-**Shape / use:** (B=2, C=2): explicit 2×2 tensor.
-
-#### `torch.arange`
-
-**Signature:** `torch.arange(start=0, end, step=1, *, out=None, dtype=None, layout=torch.strided, device=None, requires_grad=False)`
-
-**Parameters:** `start` — inclusive beginning; `end` — exclusive stop; `step` — signed spacing; `out` — optional preallocated output; `dtype` — element type; `layout` — storage layout (usually strided); `device` — destination; `requires_grad` — autograd tracking.
-
-```python
-indices = torch.arange(start=1, end=7, step=2, out=None,
-                       dtype=torch.int64, layout=torch.strided,
-                       device="cpu", requires_grad=False)
-```
-
-**Shape / use:** (T=3,): `[1,3,5]`, end excluded.
-
-#### `torch.linspace`
-
-**Signature:** `torch.linspace(start, end, steps, *, out=None, dtype=None, layout=torch.strided, device=None, requires_grad=False)`
-
-**Parameters:** `start` — inclusive first value; `end` — inclusive last value; `steps` — output count; `out` — optional destination; `dtype` — element type; `layout` — tensor layout; `device` — destination; `requires_grad` — gradient tracking.
-
-```python
-grid = torch.linspace(start=0., end=1., steps=5, out=None,
-                      dtype=torch.float32, layout=torch.strided,
-                      device="cpu", requires_grad=False)
-```
-
-**Shape / use:** (N=5,): five values from 0 to 1.
-
-#### `torch.randperm`
-
-**Signature:** `torch.randperm(n, *, generator=None, out=None, dtype=torch.int64, layout=torch.strided, device=None, requires_grad=False, pin_memory=False)`
-
-**Parameters:** `n` — number of shuffled indices 0…n−1; `generator` — optional reproducible RNG; `out` — preallocated destination; `dtype` — integer type; `layout` — layout; `device` — destination; `requires_grad` — gradient tracking (normally False); `pin_memory` — pinned CPU allocation.
-
-```python
-rng = torch.Generator(device="cpu").manual_seed(42)
-order = torch.randperm(n=5, generator=rng, out=None,
-                       dtype=torch.int64, layout=torch.strided,
-                       device="cpu", requires_grad=False, pin_memory=False)
-```
-
-**Shape / use:** (B=5,): one permutation for trajectory minibatches.
-
-#### `torch.zeros`
-
-**Signature:** `torch.zeros(*size, *, out=None, dtype=None, layout=torch.strided, device=None, requires_grad=False, pin_memory=False)`
-
-**Parameters:** `*size` — dimensions (tuple or positional); `out` — optional destination; `dtype` — element type; `layout` — storage format; `device` — CPU/CUDA; `requires_grad` — track gradients; `pin_memory` — pinned CPU allocation.
-
-```python
-z = torch.zeros(2, 3, out=None, dtype=torch.float32,
-                layout=torch.strided, device="cpu",
-                requires_grad=False, pin_memory=False)
-```
-
-**Shape / use:** (B=2, T=3): zero-valued reward table.
-
-#### `torch.zeros_like`
-
-**Signature:** `torch.zeros_like(input, *, dtype=None, layout=None, device=None, requires_grad=False, memory_format=torch.preserve_format)`
-
-**Parameters:** `input` — reference shape; `dtype` — override dtype or inherit; `layout` — override storage layout; `device` — override device; `requires_grad` — gradient flag; `memory_format` — layout preservation policy.
-
-```python
-reference = torch.ones(2, 3)
-z = torch.zeros_like(input=reference, dtype=torch.float32,
-                     layout=torch.strided, device="cpu",
-                     requires_grad=False, memory_format=torch.preserve_format)
-```
-
-**Shape / use:** (B=2, T=3): zero tensor matching a reference.
-
-#### `torch.ones`
-
-**Signature:** `torch.ones(*size, *, out=None, dtype=None, layout=torch.strided, device=None, requires_grad=False, pin_memory=False)`
-
-**Parameters:** `*size` — output dimensions; `out` — optional buffer; `dtype` — element type; `layout` — storage layout; `device` — destination; `requires_grad` — gradient tracking; `pin_memory` — pinned CPU allocation.
-
-```python
-mask = torch.ones(2, 3, out=None, dtype=torch.float32,
-                  layout=torch.strided, device="cpu",
-                  requires_grad=False, pin_memory=False)
-```
-
-**Shape / use:** (B=2, T=3): bootstrap switches initially set to one.
-
-#### `torch.ones_like`
-
-**Signature:** `torch.ones_like(input, *, dtype=None, layout=None, device=None, requires_grad=False, memory_format=torch.preserve_format)`
-
-**Parameters:** `input` — reference shape; `dtype` — dtype choice; `layout` — tensor layout; `device` — CPU/CUDA; `requires_grad` — gradient tracking; `memory_format` — layout preservation.
-
-```python
-reference = torch.zeros(2, 3)
-mask = torch.ones_like(input=reference, dtype=torch.float32,
-                       layout=torch.strided, device="cpu",
-                       requires_grad=False, memory_format=torch.preserve_format)
-```
-
-**Shape / use:** (B=2, T=3): same shape as reference.
-
-#### `torch.full_like`
-
-**Signature:** `torch.full_like(input, fill_value, *, dtype=None, layout=None, device=None, requires_grad=False, memory_format=torch.preserve_format)`
-
-**Parameters:** `input` — reference tensor; `fill_value` — scalar used everywhere; `dtype` — type; `layout` — layout; `device` — device; `requires_grad` — gradient flag; `memory_format` — storage-memory policy.
-
-```python
-reference = torch.zeros(2, 3)
-padded = torch.full_like(input=reference, fill_value=-1.,
-                         dtype=torch.float32, layout=torch.strided,
-                         device="cpu", requires_grad=False,
-                         memory_format=torch.preserve_format)
-```
-
-**Shape / use:** (B=2, T=3): filled with −1.
-
-#### `torch.randn`
-
-**Signature:** `torch.randn(*size, *, generator=None, out=None, dtype=None, layout=torch.strided, device=None, requires_grad=False, pin_memory=False)`
-
-**Parameters:** `*size` — output dimensions; `generator` — optional RNG; `out` — optional destination; `dtype` — element type; `layout` — storage layout; `device` — device; `requires_grad` — autograd; `pin_memory` — pinned CPU allocation.
-
-```python
-noise = torch.randn(2, 3, generator=None, out=None,
-                    dtype=torch.float32, layout=torch.strided,
-                    device="cpu", requires_grad=False, pin_memory=False)
-```
-
-**Shape / use:** (B=2, C=3): standard-normal random numbers.
-
-#### `torch.randint`
-
-**Signature:** `torch.randint(low, high, size, *, generator=None, out=None, dtype=None, layout=torch.strided, device=None, requires_grad=False)`
-
-**Parameters:** `low` — inclusive smallest integer; `high` — exclusive upper bound; `size` — output shape; `generator` — RNG; `out` — optional destination; `dtype` — integer type; `layout` — storage layout; `device` — device; `requires_grad` — gradient tracking (normally False).
-
-```python
-kinds = torch.randint(low=1, high=3, size=(8,), generator=None,
-                      out=None, dtype=torch.int64, layout=torch.strided,
-                      device="cpu", requires_grad=False)
-```
-
-**Shape / use:** (B=8,): prompt kinds 1 or 2.
-
-#### `Tensor.reshape`
-
-**Signature:** `x.reshape(*shape)`
-
-**Parameters:** `*shape` — target dimensions; `one dimension may be −1 for inferenc` — e dimension may be −1 for inference; `new dimensions must preserve element coun` — w dimensions must preserve element count.
-
-```python
-x = torch.arange(6)
-y = x.reshape(2, 3)
-```
-
-**Shape / use:** (B=2, T=3): reorganizes six elements; may return a view or copy.
-
-#### `Tensor.expand`
-
-**Signature:** `x.expand(*sizes)`
-
-**Parameters:** `*sizes` — expanded shape; `only singleton dimensions can be broadcas` — ly singleton dimensions can be broadcast; `expansion does not copy storag` — pansion does not copy storage.
-
-```python
-x = torch.tensor([[2], [3]])  # (B=2, 1)
-y = x.expand(2, 4)         # (B=2, T=4)
-```
-
-**Shape / use:** Expanded entries share storage; avoid in-place writes.
-
-#### `Tensor.numel`
-
-**Signature:** `x.numel()`
-
-**Parameters:** `No parameters` — returns the total element count, even for tensors with zero dimensions..
-
-```python
-valid = torch.tensor([True, False, True])
-count = valid.numel()  # 3
-```
-
-**Shape / use:** Returns Python `int`; for count of valid actions use `valid.sum()` instead.
-
-#### `Tensor.unsqueeze`
-
-**Signature:** `x.unsqueeze(dim)`
-
-**Parameters:** `dim` — insertion index for a new size-1 axis; `negative axes count from the en` — gative axes count from the end.
-
-```python
-x = torch.tensor([1, 2, 3])  # (T=3,)
-y = x.unsqueeze(dim=0)     # (B=1, T=3)
-```
-
-**Shape / use:** Creates a singleton axis.
-
-#### `Tensor.squeeze`
-
-**Signature:** `x.squeeze(dim=None)`
-
-**Parameters:** `dim` — optional axis (or tuple of axes in recent PyTorch); `None removes all size-1 dimension` — ne removes all size-1 dimensions.
-
-```python
-x = torch.ones(2, 1, 3)
-y = x.squeeze(dim=1)  # (B=2, C=3)
-```
-
-**Shape / use:** Prefer an explicit `dim` to avoid accidentally removing batch size 1.
-
-#### `Tensor.transpose`
-
-**Signature:** `x.transpose(dim0, dim1)`
-
-**Parameters:** `dim0` — first axis to swap; `dim1` — second axis to swap.
-
-```python
-x = torch.zeros(2, 3, 4)  # (B,T,C)
-y = x.transpose(dim0=1, dim1=2)  # (B,C,T)
-```
-
-**Shape / use:** Swaps exactly two axes; often creates a view.
-
-#### `Tensor.flatten`
-
-**Signature:** `x.flatten(start_dim=0, end_dim=-1)`
-
-**Parameters:** `start_dim` — first axis to merge; `end_dim` — last axis to merge (inclusive).
-
-```python
-x = torch.zeros(2, 3, 4)        # (B,T,C)
-y = x.flatten(start_dim=1, end_dim=2)  # (B,T*C)
-```
-
-**Shape / use:** Collapses a contiguous range of logical dimensions.
-
-#### `torch.stack`
-
-**Signature:** `torch.stack(tensors, dim=0, *, out=None)`
-
-**Parameters:** `tensors` — same-shaped sequence of tensors; `dim` — new dimension insertion position; `out` — optional output tensor.
-
-```python
-rows = [torch.tensor([1, 2]), torch.tensor([3, 4])]
-y = torch.stack(tensors=rows, dim=0, out=None)
-```
-
-**Shape / use:** (B=2, T=2): creates a NEW axis.
-
-#### `torch.cat`
-
-**Signature:** `torch.cat(tensors, dim=0, *, out=None)`
-
-**Parameters:** `tensors` — nonempty sequence, same shape except concat axis; `dim` — EXISTING concatenation axis; `out` — optional destination.
-
-```python
-a = torch.tensor([[1, 2]])  # (B=1, T=2)
-b = torch.tensor([[3]])     # (B=1, T=1)
-y = torch.cat(tensors=(a, b), dim=1, out=None)
-```
-
-**Shape / use:** (B=1, T=3): appends a token, not a batch.
-
-#### `torch.repeat_interleave`
-
-**Signature:** `torch.repeat_interleave(input, repeats, dim=None, *, output_size=None)`
-
-**Parameters:** `input` — source tensor; `repeats` — scalar count or per-element counts; `dim` — repeat axis (None flattens); `output_size` — optional total output length on that axis.
-
-```python
-x = torch.tensor([[10, 20]])
-y = torch.repeat_interleave(input=x, repeats=2, dim=1,
-                            output_size=4)
-```
-
-**Shape / use:** (B=1, T=4): `[10,10,20,20]`; also used for KV head expansion.
-
-### B. Numerical operations, reductions and indexing
-
-#### `torch.exp`
-
-**Signature:** `torch.exp(input, *, out=None)`
-
-**Parameters:** `input` — tensor of exponent arguments; `out` — optional output buffer.
-
-```python
-x = torch.tensor([0., 1.])
-y = torch.exp(input=x, out=None)
-```
-
-**Shape / use:** (N=2,): element-wise eˣ, used to convert log-ratios to importance ratios.
-
-#### `torch.log`
-
-**Signature:** `torch.log(input, *, out=None)`
-
-**Parameters:** `input` — tensor of positive numbers; `out` — optional output buffer.
-
-```python
-p = torch.tensor([0.2, 0.8])
-log_p = torch.log(input=p, out=None)
-```
-
-**Shape / use:** (N=2,): natural logarithms; zero yields −inf.
-
-#### `torch.sqrt`
-
-**Signature:** `torch.sqrt(input, *, out=None)`
-
-**Parameters:** `input` — tensor of nonnegative real numbers; `out` — optional destination.
-
-```python
-x = torch.tensor([4., 9.])
-y = torch.sqrt(input=x, out=None)
-```
-
-**Shape / use:** (N=2,): square roots `[2,3]`; used in attention scaling.
-
-#### `torch.clamp`
-
-**Signature:** `torch.clamp(input, min=None, max=None, *, out=None)`
-
-**Parameters:** `input` — tensor to bound; `min` — optional lower bound; `max` — optional upper bound; `out` — optional output buffer.
-
-```python
-ratios = torch.tensor([0.5, 1.0, 1.5])
-clipped = torch.clamp(input=ratios, min=0.8, max=1.2, out=None)
-```
-
-**Shape / use:** (T=3,): PPO probability-ratio clipping `[0.8,1.0,1.2]`.
-
-#### `torch.minimum`
-
-**Signature:** `torch.minimum(input, other, *, out=None)`
-
-**Parameters:** `input` — first tensor; `other` — second tensor (broadcastable); `out` — optional result buffer.
-
-```python
-raw = torch.tensor([3., -2.])
-clipped = torch.tensor([2., -1.])
-surrogate = torch.minimum(input=raw, other=clipped, out=None)
-```
-
-**Shape / use:** (T=2,): pointwise pessimistic PPO objective.
-
-#### `Tensor.square`
-
-**Signature:** `x.square()`
-
-**Parameters:** `No parameters` — squares every element of the receiver tensor.
-
-```python
-x = torch.tensor([-2., 3.])
-y = x.square()
-```
-
-**Shape / use:** (N=2,): `[4,9]`; useful for squared value error.
-
-#### `Tensor.mean`
-
-**Signature:** `x.mean(dim=None, keepdim=False, *, dtype=None)`
-
-**Parameters:** `dim` — axis or axes to average, None means all values; `keepdim` — retain reduced axes as length 1; `dtype` — optional accumulation/output type.
-
-```python
-x = torch.tensor([[2., 4.], [6., 8.]])
-y = x.mean(dim=1, keepdim=True, dtype=torch.float32)
-```
-
-**Shape / use:** (B=2, 1): averages across sequence positions.
-
-#### `Tensor.var`
-
-**Signature:** `x.var(dim=None, correction=1, keepdim=False)`
-
-**Parameters:** `dim` — axes to reduce, None reduces all; `correction` — degrees-of-freedom adjustment (1 for sample variance, 0 for population variance); `keepdim` — preserve size-1 axes.
-
-```python
-x = torch.tensor([[1., 2., 3.], [2., 4., 6.]])
-y = x.var(dim=1, correction=0, keepdim=False)
-```
-
-**Shape / use:** (B=2,): population variance within each sequence.
-
-#### `Tensor.sum`
-
-**Signature:** `x.sum(dim=None, keepdim=False, dtype=None)`
-
-**Parameters:** `dim` — axis or axes, None reduces entire tensor; `keepdim` — retain reduced axis; `dtype` — optional accumulation/output dtype.
-
-```python
-rewards = torch.tensor([[0., 1.], [0., 0.5]])
-y = rewards.sum(dim=1, keepdim=False, dtype=torch.float32)
-```
-
-**Shape / use:** (B=2,): total observed reward per trajectory.
-
-#### `torch.cumsum`
-
-**Signature:** `torch.cumsum(input, dim, *, dtype=None, out=None)`
-
-**Parameters:** `input` — source tensor; `dim` — dimension along which to accumulate; `dtype` — optionally change accumulation type; `out` — optional output buffer.
-
-```python
-x = torch.tensor([1, 2, 3])
-prefix = torch.cumsum(input=x, dim=0, dtype=torch.int64, out=None)
-```
-
-**Shape / use:** (T=3,): prefix sums `[1,3,6]`, used in causal prefix computations.
-
-#### `torch.linalg.vector_norm`
-
-**Signature:** `torch.linalg.vector_norm(x, ord=2, dim=None, keepdim=False, *, dtype=None, out=None)`
-
-**Parameters:** `x` — input; `ord` — norm order (2 is Euclidean); `dim` — axes to reduce; `keepdim` — preserve reduced axes; `dtype` — optional computation type; `out` — optional result buffer.
-
-```python
-x = torch.tensor([[3., 4.], [5., 12.]])
-norms = torch.linalg.vector_norm(x=x, ord=2, dim=1,
-                                 keepdim=False, dtype=torch.float32, out=None)
-```
-
-**Shape / use:** (B=2,): Euclidean norms `[5,13]`.
-
-#### `torch.isfinite`
-
-**Signature:** `torch.isfinite(input)`
-
-**Parameters:** `input` — tensor to test for finite numbers (rejects NaN, +inf and −inf).
-
-```python
-x = torch.tensor([1., float("nan"), float("inf")])
-finite = torch.isfinite(input=x)
-```
-
-**Shape / use:** (N=3,): Boolean mask `[True,False,False]`.
-
-#### `torch.maximum`
-
-**Signature:** `torch.maximum(input, other, *, out=None)`
-
-**Parameters:** `input` — first operand; `other` — broadcastable second operand; `out` — optional destination.
-
-```python
-a = torch.tensor([-1., 3.])
-b = torch.zeros(2)
-y = torch.maximum(input=a, other=b, out=None)
-```
-
-**Shape / use:** (N=2,): element-wise larger of two values.
-
-#### `torch.any`
-
-**Signature:** `torch.any(input, dim=None, keepdim=False, *, out=None)`
-
-**Parameters:** `input` — Boolean/numeric conditions; `dim` — optional reduction axis (None means all); `keepdim` — preserve axis; `out` — optional result tensor.
-
-```python
-invalid = torch.tensor([[False, True], [False, False]])
-flag = torch.any(input=invalid, dim=1, keepdim=False, out=None)
-```
-
-**Shape / use:** (B=2,): True if any invalid position in each row.
-
-#### `torch.all`
-
-**Signature:** `torch.all(input, dim=None, keepdim=False, *, out=None)`
-
-**Parameters:** `input` — Boolean/numeric condition tensor; `dim` — optional axis (None checks all); `keepdim` — preserve axis; `out` — optional destination.
-
-```python
-valid = torch.tensor([[True, True], [True, False]])
-flags = torch.all(input=valid, dim=1, keepdim=False, out=None)
-```
-
-**Shape / use:** (B=2,): True only for fully valid rows.
-
-#### `torch.where`
-
-**Signature:** `torch.where(condition, input, other, *, out=None)`
-
-**Parameters:** `condition` — Boolean selection mask; `input` — values where True; `other` — values where False; `out` — optional destination; `a one-argument overload instead returns indice` — one-argument overload instead returns indices.
-
-```python
-mask = torch.tensor([True, False])
-chosen = torch.where(condition=mask,
-                     input=torch.tensor([5, 5]),
-                     other=torch.tensor([0, 0]), out=None)
-```
-
-**Shape / use:** (N=2,): `[5,0]`, useful for selecting valid action positions.
-
-#### `Tensor.masked_fill`
-
-**Signature:** `x.masked_fill(mask, value)`
-
-**Parameters:** `mask` — broadcastable Boolean mask; `value` — scalar replacement for True positions.
-
-```python
-x = torch.tensor([[1., 2., 3.]])
-y = x.masked_fill(mask=torch.tensor([[False, True, False]]),
-                  value=0.0)
-```
-
-**Shape / use:** (B=1,T=3): masks one padded action.
-
-#### `torch.topk`
-
-**Signature:** `torch.topk(input, k, dim=None, largest=True, sorted=True, *, out=None)`
-
-**Parameters:** `input` — source scores; `k` — number to select; `dim` — selection axis; `largest` — True chooses largest; `sorted` — sort selected scores; `out` — optional pair of buffers (values, indices).
-
-```python
-scores = torch.tensor([[0.2, 0.5, 0.3]])
-values, ids = torch.topk(input=scores, k=2, dim=-1,
-                         largest=True, sorted=True, out=None)
-```
-
-**Shape / use:** (B=1,K=2): highest scores and matching vocabulary indices.
-
-#### `torch.sort`
-
-**Signature:** `torch.sort(input, dim=-1, descending=False, stable=False, *, out=None)`
-
-**Parameters:** `input` — tensor to sort; `dim` — sorting axis; `descending` — reverse order; `stable` — preserve order of equal keys; `out` — optional (values,indices) buffers.
-
-```python
-scores = torch.tensor([0.3, 0.1, 0.2])
-values, indices = torch.sort(input=scores, dim=0,
-                             descending=True, stable=True, out=None)
-```
-
-**Shape / use:** (N=3,): sorted scores and their original indices.
-
-#### `Tensor.scatter_`
-
-**Signature:** `x.scatter_(dim, index, src, reduce=None)`
-
-**Parameters:** `dim` — destination axis; `index` — integer destination indices; `src` — tensor source or scalar value; `reduce` — optional legacy reduction (None, 'add' or 'multiply'; `prefer `scatter_reduce_` for modern reductions` — efer `scatter_reduce_` for modern reductions); `trailing underscore means in-plac` — ailing underscore means in-place.
-
-```python
-x = torch.zeros(1, 4)
-indices = torch.tensor([[1, 3]])
-source = torch.tensor([[5., 6.]])
-x.scatter_(dim=1, index=indices, src=source)
-# Optional legacy reduction uses reduce="add" (deprecated).
-# Prefer scatter_reduce_ for reduction-based writes.
-```
-
-**Shape / use:** (B=1,V=4): writes 5 into position 1 and 6 into position 3.
-
-#### `torch.allclose`
-
-**Signature:** `torch.allclose(input, other, rtol=1e-05, atol=1e-08, equal_nan=False)`
-
-**Parameters:** `input` — first tensor; `other` — reference tensor; `rtol` — relative tolerance; `atol` — absolute tolerance; `equal_nan` — treat NaNs at identical positions as equal.
-
-```python
-is_close = torch.allclose(input=torch.tensor([1.000001]),
-                          other=torch.tensor([1.0]),
-                          rtol=1e-5, atol=1e-8, equal_nan=False)
-```
-
-**Shape / use:** Returns Python `bool`, useful for numerical invariants.
-
-#### `torch.equal`
-
-**Signature:** `torch.equal(input, other)`
-
-**Parameters:** `input` — first tensor; `other` — second tensor, must match shape and all elements exactly.
-
-```python
-same = torch.equal(input=torch.tensor([1, 2]),
-                   other=torch.tensor([1, 2]))
-```
-
-**Shape / use:** Returns Python `bool`; unlike allclose, no numeric tolerance.
-
-### C. Probability, sampling and cross-entropy
-
-#### `torch.softmax / F.softmax`
-
-**Signature:** `torch.softmax(input, dim, dtype=None); F.softmax(input, dim=None, _stacklevel=3, dtype=None)`
-
-**Parameters:** `input` — unnormalized logits; `dim` — vocabulary/normalization axis; `dtype` — optional computation/output dtype; `_stacklevel` — internal warning stack-depth argument of F.softmax, normally left at 3.
-
-```python
-logits = torch.tensor([[1., 2., 3.]])  # (B,V)
-p = torch.softmax(input=logits, dim=-1, dtype=torch.float32)
-p_f = F.softmax(input=logits, dim=-1, _stacklevel=3,
-                dtype=torch.float32)
-```
-
-**Shape / use:** (B=1,V=3): probabilities sum to one over the vocabulary axis.
-
-#### `torch.log_softmax / F.log_softmax`
-
-**Signature:** `torch.log_softmax(input, dim, dtype=None); F.log_softmax(input, dim=None, _stacklevel=3, dtype=None)`
-
-**Parameters:** `input` — logits tensor; `dim` — softmax axis; `dtype` — optional computation type; `_stacklevel` — F.log_softmax's internal warning stack-depth argument, usually 3.
-
-```python
-logits = torch.tensor([[1., 2., 3.]])  # (B,V)
-log_p = torch.log_softmax(input=logits, dim=-1, dtype=torch.float32)
-log_p_f = F.log_softmax(input=logits, dim=-1, _stacklevel=3,
-                        dtype=torch.float32)
-```
-
-**Shape / use:** (B=1,V=3): numerically stable log-probabilities.
-
-#### `F.cross_entropy`
-
-**Signature:** `F.cross_entropy(input, target, weight=None, size_average=None, ignore_index=-100, reduce=None, reduction='mean', label_smoothing=0.0)`
-
-**Parameters:** `input` — class logits `(B,V)` or `(B,V,...)`; `target` — class indices `(B,)` or class probabilities; `weight` — per-class weights; `size_average` — deprecated reduction override, use None; `ignore_index` — target index excluded from loss; `reduce` — deprecated reduction override, use None; `reduction` — 'none' / 'mean' / 'sum'; `label_smoothing` — mixing of one-hot targets with uniform probability.
-
-```python
-logits = torch.tensor([[1., 2., 3.], [2., 1., 0.]]) # (B,V)
-targets = torch.tensor([2, 0])                       # (B,)
-loss = F.cross_entropy(input=logits, target=targets,
-                       weight=None, size_average=None,
-                       ignore_index=-100, reduce=None,
-                       reduction="mean", label_smoothing=0.0)
-```
-
-**Shape / use:** Scalar NLL/cross-entropy for two labeled sequences; deprecated flags left `None`.
-
-#### `torch.multinomial`
-
-**Signature:** `torch.multinomial(input, num_samples, replacement=False, *, generator=None, out=None)`
-
-**Parameters:** `input` — nonnegative categorical weights (normalization not required); `num_samples` — draws per row; `replacement` — whether a category may be sampled twice; `generator` — optional reproducible RNG; `out` — optional output tensor.
-
-```python
-weights = torch.tensor([[0.1, 0.2, 0.7]])  # (B,V)
-draws = torch.multinomial(input=weights, num_samples=1,
-                          replacement=False, generator=None, out=None)
-```
-
-**Shape / use:** (B=1,K=1): sampled integer token IDs; the sampling operation is discrete.
-
-#### `torch.argmax`
-
-**Signature:** `torch.argmax(input, dim=None, keepdim=False)`
-
-**Parameters:** `input` — values/scores; `dim` — axis to search (None flattens); `keepdim` — retain selected axis of length 1.
-
-```python
-logits = torch.tensor([[0.1, 0.9, 0.3]])
-ids = torch.argmax(input=logits, dim=-1, keepdim=True)
-```
-
-**Shape / use:** (B=1,1): greedy next-token index, not a differentiable sample.
-
-### D. Autograd and parameter handling
-
-#### `Tensor.backward`
-
-**Signature:** `x.backward(gradient=None, retain_graph=None, create_graph=False, inputs=None)`
-
-**Parameters:** `gradient` — upstream gradient for non-scalar x (None for scalar); `retain_graph` — keep forward graph after backward; `create_graph` — track gradients of derivatives for higher order differentiation; `inputs` — optional subset of leaf tensors that receive gradients.
-
-```python
-x = torch.tensor([1., 2.], requires_grad=True)
-loss = x.square().sum()  # scalar
-loss.backward(gradient=None, retain_graph=False,
-              create_graph=False, inputs=[x])
-```
-
-**Shape / use:** `x.grad` becomes `[2,4]`; default backward accumulates into `.grad`.
-
-#### `torch.autograd.grad`
-
-**Signature:** `torch.autograd.grad(outputs, inputs, grad_outputs=None, retain_graph=None, create_graph=False, only_inputs=True, allow_unused=None, is_grads_batched=False, materialize_grads=False)`
-
-**Parameters:** `outputs` — differentiated output(s); `inputs` — tensor(s) to differentiate against; `grad_outputs` — upstream vector(s) for nonscalar outputs; `retain_graph` — preserve backward graph; `create_graph` — construct higher-order gradient graph; `only_inputs` — legacy flag (ignored; `gradients only for inputs` — adients only for inputs); `allow_unused` — whether disconnected inputs are allowed (None follows materialize_grads); `is_grads_batched` — first grad_outputs dimension indexes independent vector-Jacobian products; `materialize_grads` — return zeros for unused inputs instead of None.
-
-```python
-x = torch.tensor([1., 2.], requires_grad=True)
-loss = x.square().sum()
-(grad,) = torch.autograd.grad(outputs=loss, inputs=(x,),
-    grad_outputs=None, retain_graph=False, create_graph=False,
-    only_inputs=True, allow_unused=False, is_grads_batched=False,
-    materialize_grads=False)
-```
-
-**Shape / use:** (N=2,): returns gradients without accumulating into `x.grad`.
-
-#### `Tensor.detach`
-
-**Signature:** `x.detach()`
-
-**Parameters:** `No parameters` — returns a tensor sharing data but severed from its autograd history.
-
-```python
-x = torch.tensor([1., 2.], requires_grad=True)
-y = (x * 2).detach()
-```
-
-**Shape / use:** (N=2,): gradient does not flow from `y` back to `x`; mutable storage can be shared.
-
-#### `Tensor.clone`
-
-**Signature:** `x.clone(*, memory_format=torch.preserve_format)`
-
-**Parameters:** `memory_format` — requested memory arrangement, typically torch.preserve_format.
-
-```python
-x = torch.tensor([1., 2.], requires_grad=True)
-y = x.clone(memory_format=torch.preserve_format)
-```
-
-**Shape / use:** (N=2,): copies storage while retaining autograd connection unless detached.
-
-#### `torch.no_grad`
-
-**Signature:** `torch.no_grad()`
-
-**Parameters:** `No parameters` — context manager or function decorator that disables reverse-mode autograd recording.
-
-```python
-x = torch.tensor([1.], requires_grad=True)
-with torch.no_grad():
-    frozen = x * 2  # requires_grad=False
-```
-
-**Shape / use:** Use for rollout collection and fixed targets; does not put the module in eval mode.
-
-### E. Optimization and optimizers
-
-#### `torch.optim.SGD`
-
-**Signature:** `torch.optim.SGD(params, lr=0.001, momentum=0, dampening=0, weight_decay=0, nesterov=False, *, maximize=False, foreach=None, differentiable=False, fused=None)`
-
-**Parameters:** `params` — iterable of trainable parameters or parameter groups; `lr` — learning rate; `momentum` — velocity mixing; `dampening` — reduces new momentum contribution; `weight_decay` — L2 regularization; `nesterov` — Nesterov-style momentum (requires positive momentum and zero dampening); `maximize` — gradient ascent instead of descent; `foreach` — fused tensor-list kernel preference; `differentiable` — track optimizer step for higher-order gradients; `fused` — fused kernel preference when supported.
-
-```python
-p = nn.Parameter(torch.tensor([1.]))
-opt = torch.optim.SGD(params=[p], lr=0.1, momentum=0.9,
-    dampening=0.0, weight_decay=0.0, nesterov=True,
-    maximize=False, foreach=None, differentiable=False, fused=None)
-```
-
-**Shape / use:** Creates SGD optimizer for a single trainable weight.
-
-#### `torch.optim.AdamW`
-
-**Signature:** `torch.optim.AdamW(params, lr=0.001, betas=(0.9,0.999), eps=1e-8, weight_decay=0.01, amsgrad=False, *, maximize=False, foreach=None, capturable=False, differentiable=False, fused=None)`
-
-**Parameters:** `params` — trainable parameter iterable / groups; `lr` — step size; `betas` — exponential moving average rates for first/second moments; `eps` — denominator stability; `weight_decay` — decoupled regularization strength; `amsgrad` — use max-of-second-moments variant; `maximize` — maximize objective rather than minimize; `foreach` — batched tensor-kernel option; `capturable` — permit accelerator graph capture; `differentiable` — enable differentiation through optimizer step; `fused` — fused implementation when available.
-
-```python
-p = nn.Parameter(torch.tensor([1.]))
-opt = torch.optim.AdamW(params=[p], lr=1e-3, betas=(0.9,0.999),
-    eps=1e-8, weight_decay=0.01, amsgrad=False, maximize=False,
-    foreach=None, capturable=False, differentiable=False, fused=None)
-```
-
-**Shape / use:** Optimizer used for Tiny GPT and PPO Actor/Critic updates.
-
-#### `Optimizer.zero_grad`
-
-**Signature:** `opt.zero_grad(set_to_none=True)`
-
-**Parameters:** `set_to_none` — True removes stored gradient tensors, whereas False fills existing gradients with zero.
-
-```python
-p = nn.Parameter(torch.tensor([1.]))
-opt = torch.optim.SGD([p], lr=0.1)
-opt.zero_grad(set_to_none=True)
-```
-
-**Shape / use:** Run before each independent backward/update; some unused gradients remain `None`.
-
-#### `Optimizer.step`
-
-**Signature:** `opt.step(closure=None)`
-
-**Parameters:** `closure` — optional function that recomputes loss and gradients (needed by some optimizers such as LBFGS); `None for common SGD/AdamW loop` — ne for common SGD/AdamW loops.
-
-```python
-p = nn.Parameter(torch.tensor([1.]))
-opt = torch.optim.SGD([p], lr=0.1)
-(p.square().sum()).backward()
-opt.step(closure=None)
-```
-
-**Shape / use:** Applies accumulated gradients to parameter values; no graph retained by default.
-
-#### `torch.nn.utils.clip_grad_norm_`
-
-**Signature:** `torch.nn.utils.clip_grad_norm_(parameters, max_norm, norm_type=2.0, error_if_nonfinite=False, foreach=None)`
-
-**Parameters:** `parameters` — iterable/tensor of model parameters with gradients; `max_norm` — allowed total norm; `norm_type` — p-norm order (2 is Euclidean, inf uses max); `error_if_nonfinite` — fail on NaN/inf total norm; `foreach` — implementation preference.
-
-```python
-model = nn.Linear(2, 1)
-model(torch.ones(1, 2)).sum().backward()
-original_norm = torch.nn.utils.clip_grad_norm_(
-    parameters=model.parameters(), max_norm=1.0,
-    norm_type=2.0, error_if_nonfinite=True, foreach=None)
-```
-
-**Shape / use:** Returns norm before clipping; trailing underscore denotes in-place modification of gradients.
-
-### F. Neural-network layers and operations
-
-#### `nn.Embedding`
-
-**Signature:** `nn.Embedding(num_embeddings, embedding_dim, padding_idx=None, max_norm=None, norm_type=2.0, scale_grad_by_freq=False, sparse=False, _weight=None, _freeze=False, device=None, dtype=None)`
-
-**Parameters:** `num_embeddings` — vocabulary/table row count; `embedding_dim` — vector width; `padding_idx` — optionally excluded padding row from gradient updates; `max_norm` — optionally renormalize rows on forward; `norm_type` — p-norm used with max_norm; `scale_grad_by_freq` — rescale by inverse batch frequency; `sparse` — sparse weight gradients; `_weight` — optional supplied weight tensor; `_freeze` — internal option to freeze embedding weights; `device` — device; `dtype` — parameter type.
-
-```python
-embedding = nn.Embedding(num_embeddings=5, embedding_dim=8,
-    padding_idx=None, max_norm=None, norm_type=2.0,
-    scale_grad_by_freq=False, sparse=False,
-    _weight=None, _freeze=False, device="cpu", dtype=torch.float32)
-token_vectors = embedding(torch.tensor([[0, 1, 2]]))
-```
-
-**Shape / use:** (B=1,T=3,C=8): token IDs become trainable dense vectors.
-
-#### `nn.Linear`
-
-**Signature:** `nn.Linear(in_features, out_features, bias=True, device=None, dtype=None)`
-
-**Parameters:** `in_features` — input channel width; `out_features` — output channel width; `bias` — learn additive offset; `device` — location of parameters; `dtype` — parameter type.
-
-```python
-head = nn.Linear(in_features=8, out_features=5,
-                 bias=False, device="cpu", dtype=torch.float32)
-logits = head(torch.randn(2, 3, 8))
-```
-
-**Shape / use:** (B=2,T=3,V=5): final feature dimension is projected.
-
-#### `nn.Parameter`
-
-**Signature:** `nn.Parameter(data=None, requires_grad=True)`
-
-**Parameters:** `data` — initial tensor values (or None); `requires_grad` — whether this value should be optimized.
-
-```python
-weight = nn.Parameter(data=torch.zeros(3, 4), requires_grad=True)
-```
-
-**Shape / use:** (3,4): registered as a trainable parameter when assigned to a Module attribute.
-
-#### `nn.init.zeros_`
-
-**Signature:** `nn.init.zeros_(tensor)`
-
-**Parameters:** `tensor` — tensor/parameter to fill with zeros in place; `initialization is executed without autograd histor` — itialization is executed without autograd history.
-
-```python
-layer = nn.Linear(2, 1)
-nn.init.zeros_(tensor=layer.weight)
-```
-
-**Shape / use:** Sets all selected parameter entries to zero; used for deliberate neutral baselines.
-
-#### `nn.ModuleList`
-
-**Signature:** `nn.ModuleList(modules=None)`
-
-**Parameters:** `modules` — iterable of nn.Module children; `all children are registered as part of the mode` — l children are registered as part of the model.
-
-```python
-layers = nn.ModuleList(modules=[nn.Linear(4, 4), nn.Linear(4, 4)])
-```
-
-**Shape / use:** Useful for stacked Transformer blocks; unlike a plain Python list, registers parameters.
-
-#### `nn.RMSNorm`
-
-**Signature:** `nn.RMSNorm(normalized_shape, eps=None, elementwise_affine=True, device=None, dtype=None)`
-
-**Parameters:** `normalized_shape` — trailing feature shape to normalize; `eps` — numerical stabilization value; `elementwise_affine` — learn scale weights; `device` — parameter device; `dtype` — parameter dtype.
-
-```python
-norm = nn.RMSNorm(normalized_shape=8, eps=1e-5,
-                  elementwise_affine=True, device="cpu",
-                  dtype=torch.float32)
-y = norm(torch.randn(2, 3, 8))
-```
-
-**Shape / use:** (B=2,T=3,C=8): normalizes final feature dimension.
-
-#### `F.elu`
-
-**Signature:** `F.elu(input, alpha=1.0, inplace=False)`
-
-**Parameters:** `input` — activations; `alpha` — negative-branch saturation magnitude; `inplace` — whether to overwrite input.
-
-```python
-x = torch.tensor([-1., 0., 1.])
-y = F.elu(input=x, alpha=1.0, inplace=False)
-```
-
-**Shape / use:** (N=3,): positive feature map can use `F.elu(x) + 1`.
-
-#### `F.gelu`
-
-**Signature:** `F.gelu(input, approximate='none')`
-
-**Parameters:** `input` — preactivation tensor; `approximate` — 'none' for exact erf form or 'tanh' for fast approximation.
-
-```python
-x = torch.tensor([-1., 0., 1.])
-y = F.gelu(input=x, approximate="tanh")
-```
-
-**Shape / use:** (N=3,): smooth gating/activation.
-
-#### `F.silu`
-
-**Signature:** `F.silu(input, inplace=False)`
-
-**Parameters:** `input` — preactivation tensor; `inplace` — overwrite input if True.
-
-```python
-x = torch.tensor([-1., 0., 1.])
-y = F.silu(input=x, inplace=False)
-```
-
-**Shape / use:** (N=3,): x·sigmoid(x), used in SwiGLU.
-
-#### `F.scaled_dot_product_attention`
-
-**Signature:** `F.scaled_dot_product_attention(query, key, value, attn_mask=None, dropout_p=0.0, is_causal=False, scale=None, enable_gqa=False)`
-
-**Parameters:** `query` — `(B,Hq,Tq,D)` query vectors; `key` — `(B,Hkv,Tk,D)` keys; `value` — `(B,Hkv,Tk,Dv)` values; `attn_mask` — optional Boolean/additive bias mask; `dropout_p` — dropout probability (set 0.0 explicitly for eval); `is_causal` — use triangular causal mask (normally cannot combine with attn_mask); `scale` — optional score multiplier (default 1/√D); `enable_gqa` — repeat KV heads internally when permitted.
-
-```python
-q = torch.randn(2, 4, 3, 8)  # (B,H,T,D)
-k = torch.randn(2, 4, 3, 8)
-v = torch.randn(2, 4, 3, 8)
-y = F.scaled_dot_product_attention(query=q, key=k, value=v,
-    attn_mask=None, dropout_p=0.0, is_causal=True,
-    scale=None, enable_gqa=False)
-```
-
-**Shape / use:** (B=2,H=4,T=3,D=8): causal attention; masks and dropout rules matter.
-
----
-
-**Reading note.** Entries here describe the parameters of the illustrated API signatures, including optional flags and important overloads. Internal or deprecated options are labeled. To inspect additional backend-specific overloads, consult the installed PyTorch version's API documentation. When copying examples to a notebook, preserve the indicated tensor shapes and respect model/device consistency.
+`torch.zeros` and `torch.ones` retain the previously listed `pin_memory` allocation option, with its documentation caveat. `Tensor.scatter_` distinguishes the displayed `reduce=None` signature from an ordinary call that omits `reduce`. Newer `torch.autograd.grad` documentation also describes dictionary inputs; the example here deliberately uses the tensor form supported by the tested runtime.
