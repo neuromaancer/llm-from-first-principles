@@ -1,17 +1,17 @@
 # PyTorch Function Reference
 
-A learning reference for **LLM from First Principles** — 68 API entries, all currently marked **Understood**.
+A learning reference for **LLM from First Principles** — **81 tracked API entries** (68 previously understood; 13 introduced in Lesson 21B).
 
 Open a function to see its **signature → parameters → example → output**. The examples show common calls; the parameter tables cover the optional arguments separately.
 
 | Browse | Entries |
 |:--|--:|
-| [Tensor creation & shapes](#tensor-creation-and-shape-operations) | 21 |
-| [Numerical operations & reductions](#numerical-and-reduction-operations) | 12 |
-| [Indexing & comparisons](#indexing-filtering-and-comparison) | 10 |
+| [Tensor creation & shapes](#tensor-creation-and-shape-operations) | 24 |
+| [Numerical operations & reductions](#numerical-and-reduction-operations) | 17 |
+| [Indexing & comparisons](#indexing-filtering-and-comparison) | 11 |
 | [Probability & sampling](#probability-and-sampling) | 5 |
 | [Autograd](#autograd-and-parameter-handling) | 5 |
-| [Optimization](#optimization-and-training) | 5 |
+| [Optimization](#optimization-and-training) | 9 |
 | [Neural-network utilities](#neural-network-utilities) | 10 |
 
 ## Shared setup
@@ -30,7 +30,7 @@ torch.set_printoptions(precision=4, sci_mode=False, linewidth=80)
 
 **Notation:** `x` is an existing tensor; `optimizer` is an optimizer instance. `*` introduces keyword-only arguments; `*size` accepts multiple dimensions. Arguments with no default are required. A trailing `_` usually denotes an in-place operation.
 
-**Output check:** All 68 examples below were executed on CPU with **PyTorch 2.10.0 / Python 3.13.5**. The repository requests `torch>=2.14.0`; these outputs are not a test of that environment. Seeded random values and numerical formatting can differ across versions/devices. Internal, deprecated, and overload-specific options are labeled rather than forced into the examples.
+**Output check:** All 81 examples were executed on CPU with **PyTorch 2.10.0 / Python 3.13.5**. The repository requests `torch>=2.14.0`; these outputs are not a test of that environment. Seeded random values and numerical formatting can differ across versions/devices. Internal, deprecated, and overload-specific options are labeled rather than forced into the examples.
 
 ## Tensor creation and shape operations
 
@@ -205,6 +205,46 @@ A seeded random output is a reference run, not a cross-version guarantee.
 [PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.randperm.html)
 
 </details>
+
+<details>
+<summary><code>torch.manual_seed</code> — Set the default RNG seed for reproducible PyTorch sampling.</summary>
+
+**Signature**
+
+```python
+torch.manual_seed(seed)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `seed` | Required | Integer seed for PyTorch RNGs; reproducibility also depends on device and algorithms. |
+
+**Example**
+
+```python
+# Purpose: Confirm that reseeding repeats the same random permutation.
+torch.manual_seed(123)
+first = torch.randperm(5)   # (B=5,): first random order
+torch.manual_seed(123)
+second = torch.randperm(5)  # (B=5,): reproduced order
+print(torch.equal(first, second))
+```
+
+**Output**
+
+```text
+True
+```
+
+Returns a `torch.Generator`; changing the global seed is not the same as maintaining an independent `Generator`.
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.manual_seed.html)
+
+</details>
+
+
 
 <details>
 <summary><code>torch.zeros</code> — Create a tensor filled with zeros.</summary>
@@ -612,6 +652,80 @@ Use `mask.sum()` to count True entries instead.
 [PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.Tensor.numel.html)
 
 </details>
+
+<details>
+<summary><code>Tensor.item</code> — Convert a single-element tensor into a Python number.</summary>
+
+**Signature**
+
+```python
+x.item()
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `—` | — | No parameters. |
+
+**Example**
+
+```python
+# Purpose: Report a scalar training loss as a Python float.
+loss = torch.tensor(0.125)  # (): one scalar loss
+print(loss.item())
+```
+
+**Output**
+
+```text
+0.125
+```
+
+Requires exactly one element; the resulting Python number is not differentiable.
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.Tensor.item.html)
+
+</details>
+
+<details>
+<summary><code>Tensor.tolist</code> — Convert tensor values into nested Python lists.</summary>
+
+**Signature**
+
+```python
+x.tolist()
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `—` | — | No parameters. |
+
+**Example**
+
+```python
+# Purpose: Inspect token IDs in familiar Python-list form.
+tokens = torch.tensor([[1, 2], [3, 4]])  # (B=2, T=2)
+print(tokens.tolist())
+```
+
+**Output**
+
+```text
+[[1, 2], [3, 4]]
+```
+
+Converts tensor values to Python objects; CUDA tensors are moved to CPU when needed. This is for inspection, not differentiable computation.
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.Tensor.tolist.html)
+
+</details>
+
+
+
+
 
 <details>
 <summary><code>Tensor.unsqueeze</code> — Insert a dimension of size one.</summary>
@@ -1070,6 +1184,200 @@ tensor([4., 9.])
 [PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.Tensor.square.html)
 
 </details>
+
+<details>
+<summary><code>Tensor.float</code> — Cast tensor elements to 32-bit floating point.</summary>
+
+**Signature**
+
+```python
+x.float()
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `—` | — | No parameters. |
+
+**Example**
+
+```python
+# Purpose: Convert integer token labels to floating-point values.
+ids = torch.tensor([1, 2], dtype=torch.int64)  # (T=2,)
+print(ids.float())
+```
+
+**Output**
+
+```text
+tensor([1., 2.])
+```
+
+Equivalent to `x.to(torch.float32)`; integer-to-float conversion does not create gradients for the integer input.
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.Tensor.float.html)
+
+</details>
+
+<details>
+<summary><code>Tensor.abs</code> — Compute absolute values element-wise.</summary>
+
+**Signature**
+
+```python
+x.abs()
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `—` | — | No parameters. |
+
+**Example**
+
+```python
+# Purpose: Measure unsigned prediction errors.
+errors = torch.tensor([-3., 2.])  # (T=2,)
+print(errors.abs())
+```
+
+**Output**
+
+```text
+tensor([3., 2.])
+```
+
+Preserves tensor shape; often combined with `.max()` to inspect the largest absolute parameter change.
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.Tensor.abs.html)
+
+</details>
+
+<details>
+<summary><code>Tensor.max</code> — Find largest values, optionally returning their indices on a chosen axis.</summary>
+
+**Signature**
+
+```python
+x.max(dim=None, keepdim=False)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `dim` | `None` | If omitted, return one scalar maximum; if supplied, return `(values, indices)` along the selected dimension. |
+| `keepdim` | `False` | Keep the reduced dimension of length 1 when `dim` is provided. |
+
+**Example**
+
+```python
+# Purpose: Find the highest score and its position in each sequence.
+scores = torch.tensor([[1., 3., 2.], [4., 0., 6.]])
+# (B=2, V=3): sequences, candidate scores
+values, positions = scores.max(dim=1)
+print(values)      # (B=2,): largest values
+print(positions)   # (B=2,): indices of largest values
+```
+
+**Output**
+
+```text
+tensor([3., 6.])
+tensor([1, 2])
+```
+
+`x.max()` with no `dim` returns a scalar tensor. Do not confuse this reduction with `torch.maximum(a, b)`, which is element-wise.
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.Tensor.max.html)
+
+</details>
+
+<details>
+<summary><code>Tensor.min</code> — Find smallest values, optionally returning their indices.</summary>
+
+**Signature**
+
+```python
+x.min(dim=None, keepdim=False)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `dim` | `None` | If omitted, return a scalar minimum; with an axis, return `(values, indices)`. |
+| `keepdim` | `False` | Preserve a size-1 reduced axis when `dim` is provided. |
+
+**Example**
+
+```python
+# Purpose: Check the lowest value in a small sample.
+scores = torch.tensor([3, 1, 2])  # (T=3,)
+print(scores.min())
+```
+
+**Output**
+
+```text
+tensor(1)
+```
+
+For the smallest pairwise elements of two tensors, use `torch.minimum(a, b)` instead.
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.Tensor.min.html)
+
+</details>
+
+<details>
+<summary><code>Tensor.norm</code> — Compute a tensor or vector norm.</summary>
+
+**Signature**
+
+```python
+x.norm(p='fro', dim=None, keepdim=False, dtype=None)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `p` | `'fro'` | Norm order: `2` for Euclidean vector norm; `'fro'` for Frobenius norm. |
+| `dim` | `None` | Dimension or tuple of dimensions; omit to reduce the whole tensor. |
+| `keepdim` | `False` | Retain reduced dimensions as size 1. |
+| `dtype` | `None` | Optional computation/output dtype. |
+
+**Example**
+
+```python
+# Purpose: Inspect the magnitude of a two-component gradient.
+grad = torch.tensor([3., 4.])  # (C=2,)
+print(grad.norm(p=2))
+```
+
+**Output**
+
+```text
+tensor(5.)
+```
+
+For new code, prefer the more explicit `torch.linalg.vector_norm` when working with vectors.
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.Tensor.norm.html)
+
+</details>
+
+
+
+
+
+
+
+
+
+
 
 <details>
 <summary><code>Tensor.mean</code> — Average values over selected dimensions.</summary>
@@ -1632,6 +1940,55 @@ True
 [PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.allclose.html)
 
 </details>
+
+<details>
+<summary><code>torch.testing.assert_close</code> — Assert numerical agreement and raise an informative error if it fails.</summary>
+
+**Signature**
+
+```python
+torch.testing.assert_close(actual, expected, *, allow_subclasses=True, rtol=None, atol=None, equal_nan=False, check_device=True, check_dtype=True, check_layout=True, check_stride=False, msg=None)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `actual` | Required | Result tensor or other supported structure being tested. |
+| `expected` | Required | Reference result or structure. |
+| `allow_subclasses` | `True` | Allow related tensor subclasses. |
+| `rtol` | `None` | Relative tolerance; defaults depend on data type. |
+| `atol` | `None` | Absolute tolerance; defaults depend on data type. |
+| `equal_nan` | `False` | Allow NaNs at corresponding locations. |
+| `check_device` | `True` | Require matching tensor devices. |
+| `check_dtype` | `True` | Require matching dtypes. |
+| `check_layout` | `True` | Require matching layouts. |
+| `check_stride` | `False` | Optionally require matching strides. |
+| `msg` | `None` | Custom error text or callable to produce it. |
+
+**Example**
+
+```python
+# Purpose: Assert that two slightly different probabilities agree.
+actual = torch.tensor([1.000001])  # (T=1,)
+expected = torch.tensor([1.0])     # (T=1,)
+torch.testing.assert_close(actual, expected, rtol=1e-5, atol=1e-8)
+print("Close tensors verified.")
+```
+
+**Output**
+
+```text
+Close tensors verified.
+```
+
+Returns `None` on success and raises `AssertionError` on failure; unlike `torch.allclose`, which returns a Boolean.
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/testing.html#torch.testing.assert_close)
+
+</details>
+
+
 
 <details>
 <summary><code>torch.equal</code> — Check identical shapes and element values without a tolerance.</summary>
@@ -2244,6 +2601,159 @@ Signature shown for SGD/AdamW. Other optimizer subclasses can have different req
 </details>
 
 <details>
+<summary><code>nn.Module.eval</code> — Switch a module and its children to evaluation behavior.</summary>
+
+**Signature**
+
+```python
+module.eval()
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `—` | — | No parameters. |
+
+**Example**
+
+```python
+# Purpose: Disable dropout behavior while collecting a rollout.
+layer = nn.Dropout(p=0.5)
+layer.eval()
+print(layer.training)
+```
+
+**Output**
+
+```text
+False
+```
+
+Equivalent to `module.train(False)`. Crucially, `eval()` does NOT disable autograd; use `torch.no_grad()` separately when gradients are unwanted.
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.nn.Module.html#torch.nn.Module.eval)
+
+</details>
+
+<details>
+<summary><code>nn.Module.train</code> — Set training or evaluation behavior for a module and its children.</summary>
+
+**Signature**
+
+```python
+module.train(mode=True)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `mode` | `True` | `True` enables training-specific behavior (e.g., dropout); `False` sets evaluation behavior. |
+
+**Example**
+
+```python
+# Purpose: Restore training behavior after evaluating.
+layer = nn.Linear(2, 1)
+layer.eval()
+layer.train(mode=True)
+print(layer.training)
+```
+
+**Output**
+
+```text
+True
+```
+
+Train mode affects module behavior, not whether gradients are tracked.
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.nn.Module.html#torch.nn.Module.train)
+
+</details>
+
+<details>
+<summary><code>nn.Module.parameters</code> — Iterate over registered parameters for optimizers or gradient checks.</summary>
+
+**Signature**
+
+```python
+module.parameters(recurse=True)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `recurse` | `True` | Include parameters of all descendant submodules when enabled. |
+
+**Example**
+
+```python
+# Purpose: Inspect registered weight and bias shapes.
+model = nn.Linear(2, 1)
+print([tuple(p.shape) for p in model.parameters(recurse=True)])
+```
+
+**Output**
+
+```text
+[(1, 2), (1,)]
+```
+
+Returns an iterator of `nn.Parameter` objects; use this when constructing AdamW or checking separate Actor/Critic parameter sets.
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.nn.Module.html#torch.nn.Module.parameters)
+
+</details>
+
+<details>
+<summary><code>nn.Module.zero_grad</code> — Clear gradient fields of all registered module parameters.</summary>
+
+**Signature**
+
+```python
+module.zero_grad(set_to_none=True)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `set_to_none` | `True` | Delete accumulated gradients (`.grad = None`) rather than fill them with zeros. |
+
+**Example**
+
+```python
+# Purpose: Clear gradients after a single backward pass.
+layer = nn.Linear(2, 1)
+layer(torch.ones(1, 2)).sum().backward()
+layer.zero_grad(set_to_none=True)
+print(layer.weight.grad is None)
+```
+
+**Output**
+
+```text
+True
+```
+
+Similar to `optimizer.zero_grad`, but affects every parameter of the module rather than only those owned by one optimizer.
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.nn.Module.html#torch.nn.Module.zero_grad)
+
+</details>
+
+
+
+
+
+
+
+
+
+<details>
 <summary><code>torch.nn.utils.clip_grad_norm_</code> — Limit the joint norm of parameter gradients in place.</summary>
 
 **Signature**
@@ -2689,7 +3199,7 @@ Dropout follows dropout_p, not the parent module's train/eval flag. scale and en
 
 Keep each new entry in the same format: one-line purpose, signature, one row per parameter, one common example, and its captured output. Explain important tensor dimensions and distinguish in-place operations. Keep optional/internal arguments in the reference table, not in the common example unless relevant.
 
-**Status:** Understood means explained and used deliberately; Introduced means encountered but still under review. The existing 68 entries retain their Understood status.
+**Status:** Understood means explained and used deliberately; Introduced means encountered but still under review. The original 68 entries retain their Understood status; the 13 newly documented Lesson 21B interfaces are Introduced pending the chapter review.
 
 ### Lesson 13 — Generation additions
 
@@ -2739,6 +3249,15 @@ These functions should be understood before the generation notebook moves on to 
 - `torch.any` and `torch.all` — validate action position, padding, and termination invariants.
 
 The RL primitives extracted after Lesson 21A live in `src/llmfp/rl/`; their regression tests use only the Python standard library and PyTorch.
+
+### Lesson 21B — Tiny GPT PPO integration (in progress)
+
+- `torch.manual_seed` — reproducible sampling and minibatch-order experiments.
+- `torch.testing.assert_close` — raise an informative error when causal rescoring and saved old log-probabilities disagree.
+- `nn.Module.eval` / `nn.Module.train` — control dropout-like behavior without enabling or disabling autograd.
+- `nn.Module.parameters` / `nn.Module.zero_grad` — inspect independently owned Actor/Critic parameters and clear gradients.
+- `Tensor.abs`, `Tensor.max`, `Tensor.min`, `Tensor.norm` — inspect parameter differences, ratio ranges, and gradient magnitudes.
+- `Tensor.item`, `Tensor.tolist`, `Tensor.float` — extract scalar diagnostics, display token sequences, and convert numeric dtypes.
 
 </details>
 
