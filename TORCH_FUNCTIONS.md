@@ -1,6 +1,6 @@
 # PyTorch Function Reference
 
-A learning reference for **LLM from First Principles** — **81 tracked API entries** (68 previously understood; 13 introduced in Lesson 21B).
+A learning reference for **LLM from First Principles** — **81 tracked API entries**, reviewed through completed Lesson 21B.
 
 Open a function to see its **signature → parameters → example → output**. The examples show common calls; the parameter tables cover the optional arguments separately.
 
@@ -3199,7 +3199,7 @@ Dropout follows dropout_p, not the parent module's train/eval flag. scale and en
 
 Keep each new entry in the same format: one-line purpose, signature, one row per parameter, one common example, and its captured output. Explain important tensor dimensions and distinguish in-place operations. Keep optional/internal arguments in the reference table, not in the common example unless relevant.
 
-**Status:** Understood means explained and used deliberately; Introduced means encountered but still under review. The original 68 entries retain their Understood status; the 13 newly documented Lesson 21B interfaces are Introduced pending the chapter review.
+**Status:** Understood means explained and used deliberately; Introduced means encountered but still under review. All 81 tracked entries are now marked Understood after the Lesson 21B review; this records the examples and semantics learned here, not exhaustive coverage of every PyTorch overload.
 
 ### Lesson 13 — Generation additions
 
@@ -3250,7 +3250,7 @@ These functions should be understood before the generation notebook moves on to 
 
 The RL primitives extracted after Lesson 21A live in `src/llmfp/rl/`; their regression tests use only the Python standard library and PyTorch.
 
-### Lesson 21B — Tiny GPT PPO integration (in progress)
+### Lesson 21B — Tiny GPT PPO integration (complete)
 
 - `torch.manual_seed` — reproducible sampling and minibatch-order experiments.
 - `torch.testing.assert_close` — raise an informative error when causal rescoring and saved old log-probabilities disagree.
@@ -3258,6 +3258,8 @@ The RL primitives extracted after Lesson 21A live in `src/llmfp/rl/`; their regr
 - `nn.Module.parameters` / `nn.Module.zero_grad` — inspect independently owned Actor/Critic parameters and clear gradients.
 - `Tensor.abs`, `Tensor.max`, `Tensor.min`, `Tensor.norm` — inspect parameter differences, ratio ranges, and gradient magnitudes.
 - `Tensor.item`, `Tensor.tolist`, `Tensor.float` — extract scalar diagnostics, display token sequences, and convert numeric dtypes.
+
+**Chapter closure (October 2026):** All 13 APIs added during Lesson 21B have been explained with a signature, parameter descriptions, a runnable common example, and its output. No additional PyTorch API entries were needed for the final lesson audit.
 
 </details>
 

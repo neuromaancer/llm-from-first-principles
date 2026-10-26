@@ -85,9 +85,9 @@ This lesson starts from the dense SwiGLU feed-forward network already used by th
 | [19](lessons/19_policy_gradients_and_reinforce.ipynb) | Policy Gradients and REINFORCE from Scratch | ✅ Complete |
 | [20](lessons/20_actor_critic_td_and_gae.ipynb) | Actor-Critic, TD Learning, and GAE | ✅ Complete |
 | [21A](lessons/21a_ppo_from_scratch.ipynb) | PPO from Scratch: clipping, GAE, rollout reuse, and a complete toy training loop | ✅ Complete |
-| 21B | PPO with Tiny GPT: Transformer Actor/Critic integration | Planned |
+| [21B](lessons/21b_ppo_with_tiny_gpt.ipynb) | PPO with Tiny GPT: Transformer Actor/Critic, rollout collection, PPO updates, and evaluation | ✅ Complete |
 
-**Lesson 21A is complete.** Its notebook remains a self-contained, manually worked-through derivation and toy experiment. Its verified, reusable PPO losses, 1D GAE, action/critic alignment, and right-padded sequence rollout contracts are now available from `llmfp.rl`, with regression tests in `tests/test_ppo_primitives.py`. The GPT integration is deliberately reserved for Lesson 21B; the overall Lesson 21 sequence is not yet complete.
+**Lessons 21A and 21B are complete.** Lesson 21A derives PPO and validates the basic toy rollout; its reusable PPO losses, GAE, token alignment, and frozen rollout contracts live in `llmfp.rl` and are covered by `tests/test_ppo_primitives.py`. Lesson 21B integrates those contracts with a GPT Actor and an independent Transformer Critic, tests autoregressive sampling versus teacher-forced rescoring, and completes PPO training and exact policy evaluation. Toy environments, comparison runners, and the teaching-only Critic stay in the notebook instead of being prematurely extracted into the reusable library.
 
 The RL section is intentionally focused. It does not try to reproduce a complete general-purpose RL curriculum; it develops the concepts needed to understand LLM post-training objectives from first principles.
 
@@ -438,7 +438,8 @@ llm-from-first-principles/
 │   ├── 18_rl_foundations.ipynb
 │   ├── 19_policy_gradients_and_reinforce.ipynb
 │   ├── 20_actor_critic_td_and_gae.ipynb
-│   └── 21a_ppo_from_scratch.ipynb
+│   ├── 21a_ppo_from_scratch.ipynb
+│   └── 21b_ppo_with_tiny_gpt.ipynb
 │
 ├── src/
 │   └── llmfp/
@@ -528,74 +529,47 @@ The Git history is part of the learning record: small commits make it possible t
 
 ## Current status
 
-Lessons **00–20** are complete.
+**Completed:** Lessons 00–21B, including the full Lesson 21 PPO sequence.
 
-Currently working on:
+**Next lesson:** 22 — Supervised Fine-Tuning (SFT). The SFT lesson has not started yet.
 
-```text
-21_ppo_from_scratch.ipynb
-```
+### Lesson 21 closure — from PPO equations to GPT updates
 
-Lesson 20 connected Monte Carlo returns to bootstrapped value learning and then to generalized advantage estimation:
+- **21A — PPO from Scratch:** derive the clipped policy objective, distinguish frozen rollout facts from current predictions, implement GAE and action/state alignment, and verify rollout reuse with a Bigram Actor-Critic.
+- **21B — PPO with Tiny GPT:** replace the Bigram policy with a randomly initialized causal Transformer Actor, implement an independent Transformer Critic, collect autoregressive completions, compute fixed GAE targets, execute minibatch PPO updates, and evaluate a complete collect → update → collect loop.
+- **Verification:** The saved 21B notebook contains **48 executed code cells** with no saved errors (Restart Kernel → Run All, October 2026). Existing reusable RL primitives are covered by **16 regression tests** in `tests/test_ppo_primitives.py`.
 
-```text
-Monte Carlo return
-    ↓
-one-step TD target
-    ↓
-TD error
-    ↓
-minimal critic
-    ↓
-minimal actor-critic loop
-    ↓
-n-step returns
-    ↓
-TD(lambda)
-    ↓
-GAE
-    ↓
-LLM token-level rollout alignment
-```
+### What the toy experiments established
 
-The lesson also established the first concrete tensor-alignment rules for the minimal RL-for-LLM stack:
+| Setting | Outcome |
+|---|---|
+| Simple two-token GPT PPO task | Exact response success improved from **2.44% to 65.40%** over 12 collection-update cycles. |
+| Context task, Bigram PPO | **47.84%** exact success after 1,536 trajectories and 192 updates; its **50% upper bound** follows mathematically from identical final prompt tokens. |
+| Context task, Tiny GPT PPO | **45.24%** exact success with the same trajectory and update counts; this single run did **not** exceed the Bigram bound. |
+| Context task, independently initialized GPT with supervised targets | **99.61%** exact success after 160 teacher-forced updates, demonstrating the architecture can represent the two mappings. |
 
-```text
-T generated actions
-    ↓
-T rewards / old log-probabilities / advantages / value targets
-    ↓
-T + 1 state values
-```
+The context PPO run was highly asymmetric across prompts: **88.37%** success for `[0,1,2] → [3,4]` versus **2.12%** for `[0,3,2] → [4,3]`. This demonstrates an optimization/exploration failure in the observed run, **not** an architectural impossibility. These are small, single-seed toy experiments; the Bigram and GPT use different learning rates and do not have equal computation costs. They do not support a universal sample-efficiency ranking, and the GPT used here was not pretrained.
 
-and kept three categories separate:
+### Reusable-code boundary
 
-```text
-collection-time facts
-        ≠
-fixed learning targets
-        ≠
-current differentiable predictions
-```
-
-Reusable RL math now includes:
+The general-purpose pieces already exist under `src/llmfp/rl/`:
 
 ```text
 src/llmfp/rl/
-├── returns.py
-│   └── discounted_returns
-├── policy_gradient.py
-│   └── reinforce_loss
-└── advantages.py
-    └── td_error
+├── advantages.py        # TD errors and generalized advantage estimation
+├── alignment.py         # causal action log-probs and Critic state alignment
+├── ppo.py               # PPO policy/value losses, entropy, masked means
+├── rollouts.py          # validated frozen rollout records and sequence slicing
+├── policy_gradient.py   # REINFORCE primitives
+└── returns.py           # discounted returns
 ```
 
-The tabular actor, tabular critic, tiny environment, n-step reference implementation, and complete-episode GAE implementation remain in the lesson because they are teaching scaffolding or because their final rollout-boundary contract is not yet stable enough for the reusable package.
+The chapter's `TinyGPTCritic`, `collect_gpt_toy_rollout`, `update_gpt_ppo`, exact toy evaluator, and task-specific Bigram comparisons remain in `lessons/21b_ppo_with_tiny_gpt.ipynb`. Extracting those pedagogical implementations into a generic training framework would obscure assumptions (two actions, fixed prompt/task types, specific evaluation and model-mode contracts) before later post-training lessons establish reusable needs.
 
-In particular, the lesson's one-mask GAE implementation is correct for complete episodes, but PPO rollout segments will require a sharper distinction between true termination, rollout truncation, continuation through collected transitions, and padding. GAE will be extracted only after that contract is made explicit in Lesson 21.
+Verify the existing RL regression suite with:
 
-Lesson 21 now asks:
+```bash
+uv run python -m unittest discover -s tests -v
+```
 
-> How can one collected rollout batch support multiple policy updates without letting the new policy move too far from the behavior policy that generated the data?
-
-That question introduces old log-probabilities, probability ratios, clipped policy objectives, minibatch reuse, and the first end-to-end PPO version of the minimal RL-for-LLM stack.
+The next conceptual step is **SFT**: teacher-forced token prediction, instruction-style data formatting, loss masking, and the relationship between supervised imitation and the reward-driven PPO experiments above.
