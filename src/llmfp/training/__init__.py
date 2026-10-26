@@ -5,6 +5,7 @@ from .checkpoint import (
     save_training_checkpoint,
 )
 from .evaluation import estimate_language_model_loss
+from .losses import per_example_sft_nll
 from .schedules import (
     cosine_decay,
     linear_warmup,
@@ -22,6 +23,7 @@ __all__ = [
     "language_model_training_step",
     "linear_warmup",
     "load_training_checkpoint",
+    "per_example_sft_nll",
     "save_training_checkpoint",
     "warmup_cosine_learning_rate",
 ]

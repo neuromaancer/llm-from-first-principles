@@ -138,13 +138,15 @@ The framework will grow only after mechanisms are derived and verified in the le
 
 | Lesson | Topic | Status |
 |---|---|---|
-| 22 | Supervised Fine-Tuning (SFT) | Planned |
+| [22](lessons/22_supervised_fine_tuning.ipynb) | Supervised Fine-Tuning (SFT) | ✅ Complete |
 | 23 | Preference Data, Sequence Log-Probabilities, and Reward Modeling | Planned |
 | 24 | RLHF with PPO and KL Regularization | Planned |
 | 25 | Direct Preference Optimization (DPO) | Planned |
 | 26 | Modern LLM RL and Preference Optimization | Planned |
 
 The post-training section will connect token-level language modeling to sequence-level optimization. It will make explicit the roles of completion log-probabilities, reference policies, KL penalties, pairwise preferences, learned rewards, and policy optimization before using higher-level training frameworks.
+
+**Lesson 22 is complete.** It connects assistant-target alignment, masking and right-padded batches to full-parameter fine-tuning of the Lesson 16 pretrained GPT, followed by teacher-forced diagnostics, greedy generation, and a Plotly evaluation heatmap. Three verified token/tensor primitives now live in `llmfp.data.supervision` and `llmfp.training.losses`; text templates, toy data, experiment loops, and plotting remain in the notebook. See the [Lesson 22 extraction audit](docs/lesson_22_extraction_audit.md) for the precise contracts, tests, and exclusions.
 
 ---
 
@@ -239,11 +241,14 @@ reuse in later lessons
 
 This keeps later notebooks focused on the new idea rather than repeatedly copying already-understood mechanisms.
 
+Extraction is selective: move a verified, template-independent operation with an explicit tensor contract and a concrete reuse role, not the whole teaching experiment. Conversely, avoiding a generic framework is not a reason to leave every reusable primitive in a notebook. Keep the original derivation and experiments available as the reference implementation; test the extracted code against them.
+
 ### 8. Use AI as a teacher, not as an autocomplete engine
 
 The coding environment used for this project disables AI code completion.
 
 AI can help challenge an explanation, discuss a derivation, review an implementation, or suggest questions to investigate. The actual learning code is typed and reasoned through manually.
+
 
 ---
 
@@ -375,7 +380,7 @@ uv sync
 
 The lessons are Jupyter notebooks and can be opened directly in VS Code or through Jupyter.
 
-Run the reusable PPO regression checks with:
+Run the reusable PPO and supervised-learning regression checks with:
 
 ```bash
 uv run python -m unittest discover -s tests -v
@@ -439,7 +444,8 @@ llm-from-first-principles/
 │   ├── 19_policy_gradients_and_reinforce.ipynb
 │   ├── 20_actor_critic_td_and_gae.ipynb
 │   ├── 21a_ppo_from_scratch.ipynb
-│   └── 21b_ppo_with_tiny_gpt.ipynb
+│   ├── 21b_ppo_with_tiny_gpt.ipynb
+│   └── 22_supervised_fine_tuning.ipynb
 │
 ├── src/
 │   └── llmfp/
@@ -453,6 +459,7 @@ llm-from-first-principles/
 │       │   └── transformer.py
 │       ├── data/
 │       │   ├── batching.py
+│       │   ├── supervision.py
 │       │   └── tokenization.py
 │       ├── models/
 │       │   └── gpt.py
@@ -471,6 +478,7 @@ llm-from-first-principles/
 │       ├── training/
 │       │   ├── checkpoint.py
 │       │   ├── evaluation.py
+│       │   ├── losses.py
 │       │   ├── schedules.py
 │       │   └── steps.py
 │       └── utils/
@@ -478,7 +486,10 @@ llm-from-first-principles/
 │           └── metrics.py
 │
 ├── tests/
-│   └── test_ppo_primitives.py
+│   ├── test_ppo_primitives.py
+│   └── test_supervised_primitives.py
+├── docs/
+│   └── lesson_22_extraction_audit.md
 ├── data/                # large/generated datasets are not committed
 ├── checkpoints/         # ignored
 ├── TORCH_FUNCTIONS.md   # PyTorch API learning tracker
@@ -525,13 +536,14 @@ docs(readme): update learning philosophy and project progress
 
 The Git history is part of the learning record: small commits make it possible to see how the model was built one concept at a time.
 
+
 ---
 
 ## Current status
 
-**Completed:** Lessons 00–21B, including the full Lesson 21 PPO sequence.
+**Completed:** Lessons 00–22, including supervised fine-tuning and the Lesson 21 PPO sequence.
 
-**Next lesson:** 22 — Supervised Fine-Tuning (SFT). The SFT lesson has not started yet.
+**Next lesson:** 23 — Preference Data, Sequence Log-Probabilities, and Reward Modeling.
 
 ### Lesson 21 closure — from PPO equations to GPT updates
 
@@ -572,4 +584,25 @@ Verify the existing RL regression suite with:
 uv run python -m unittest discover -s tests -v
 ```
 
-The next conceptual step is **SFT**: teacher-forced token prediction, instruction-style data formatting, loss masking, and the relationship between supervised imitation and the reward-driven PPO experiments above.
+### Lesson 22 closure — supervised fitting versus generalization
+
+The [SFT notebook](lessons/22_supervised_fine_tuning.ipynb) restores the Lesson 16 `step_02000.pt` checkpoint: a 3,050,240-parameter GPT with a 65-character vocabulary. Forty AdamW updates fit four instruction-response pairs containing 26 supervised character targets, with the original pretrained model preserved for comparison.
+
+| Measurement | Pretrained | After SFT |
+|---|---:|---:|
+| Training assistant-token mean NLL | 3.0573 | 0.000189 |
+| Greedy first-line exact matches on training instructions | 0/4 | 4/4 |
+| Greedy first-line exact matches on three held-out probes | 0/3 | 0/3 |
+| Teacher-forced NLL on `Say welcome` → `Welcome` | 2.3556 | 3.4502 |
+
+The LM-head weight-change norm was approximately 0.2926. On the held-out prompts `Say welcome`, `Say no`, and `Say please`, the fine-tuned model produced `Thanks`, `Yes`, and `Farewell`, respectively. These observations establish successful fitting of the four supervised examples, **not** general instruction-following or a causal account of how the model represented the task. There is only one training configuration and a tiny, manually constructed probe set.
+
+Exact match requires the expected first response line plus an observed newline within a 24-character decoding budget. The decoder generates a fixed number of characters; the notebook extracts the first line afterward. This is not a native EOS token or an early-stopping implementation.
+
+**Reusable pieces:** `shift_supervised_tokens` aligns full-sequence token/mask inputs once; `pad_supervised_batch` right-pads already shifted examples; `per_example_sft_nll` computes differentiable per-sequence supervised means. The [extraction audit](docs/lesson_22_extraction_audit.md) links their contracts to the notebook and explains why the task-specific encoders, generation wrapper, training loop, and Plotly code stay there. The existing `language_model_training_step` already calls cross-entropy with its default `ignore_index=-100`; a second SFT trainer was not added.
+
+**Checkpoint:** The notebook saves and reloads `checkpoints/tiny_shakespeare_sft/step_00040.pt` locally, including a plain configuration dictionary, ordered tokenizer vocabulary, and model weights. It does not save optimizer or RNG state, so it supports model restoration rather than exact training resumption. Checkpoint files are not committed.
+
+**Verification boundary:** The experiment numbers and checkpoint-restoration message above are saved outputs in the user's notebook at commit `2a4935748b597e786e126554f1991379eb1c615c`; the assistant did not rerun that pretrained-checkpoint experiment. The 12 new supervised primitive tests were run in isolation on CPU with Python 3.13.5 / PyTorch 2.10.0. This is not a verification of the declared `torch>=2.14.0` environment, CUDA execution, or a newly completed full-notebook Run All. The existing 16 PPO tests were not rerun during this extraction; the normal repository test-discovery command above includes both suites.
+
+The next conceptual step is **Lesson 23**: complete-response log-probabilities, preference pairs, and reward modeling. It connects supervised token prediction to the sequence-level objectives used later in RLHF and DPO.

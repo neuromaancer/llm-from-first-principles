@@ -1,6 +1,6 @@
 # PyTorch Function Reference
 
-A learning reference for **LLM from First Principles** — **81 tracked API entries**, reviewed through completed Lesson 21B.
+A learning reference for **LLM from First Principles** — **89 tracked API entries**, reviewed through completed Lesson 22.
 
 Open a function to see its **signature → parameters → example → output**. The examples show common calls; the parameter tables cover the optional arguments separately.
 
@@ -13,6 +13,7 @@ Open a function to see its **signature → parameters → example → output**. 
 | [Autograd](#autograd-and-parameter-handling) | 5 |
 | [Optimization](#optimization-and-training) | 9 |
 | [Neural-network utilities](#neural-network-utilities) | 10 |
+| [Lesson 22: supervision & checkpoints](#lesson-22--supervision-and-checkpoint-apis) | 8 |
 
 ## Shared setup
 
@@ -30,7 +31,7 @@ torch.set_printoptions(precision=4, sci_mode=False, linewidth=80)
 
 **Notation:** `x` is an existing tensor; `optimizer` is an optimizer instance. `*` introduces keyword-only arguments; `*size` accepts multiple dimensions. Arguments with no default are required. A trailing `_` usually denotes an in-place operation.
 
-**Output check:** All 81 examples were executed on CPU with **PyTorch 2.10.0 / Python 3.13.5**. The repository requests `torch>=2.14.0`; these outputs are not a test of that environment. Seeded random values and numerical formatting can differ across versions/devices. Internal, deprecated, and overload-specific options are labeled rather than forced into the examples.
+**Output check:** The original 81 examples were executed in the prior review on CPU with **PyTorch 2.10.0 / Python 3.13.5**. The repository requests `torch>=2.14.0`; these outputs are not a test of that environment. Seeded random values and numerical formatting can differ across versions/devices. Internal, deprecated, and overload-specific options are labeled rather than forced into the examples.
 
 ## Tensor creation and shape operations
 
@@ -3190,6 +3191,396 @@ Dropout follows dropout_p, not the parent module's train/eval flag. scale and en
 
 </details>
 
+## Lesson 22 — Supervision and checkpoint APIs
+
+These eight APIs were used in Lesson 22 but were not independently indexed in
+this reference. An addition here does not imply the API first appeared in this
+chapter. The examples below are self-contained apart from the shared imports.
+They were executed on CPU with Python 3.13.5 / PyTorch 2.10.0; they do not verify
+the project's declared `torch>=2.14.0` or CUDA environment.
+
+<details>
+<summary><code>torch.full</code> — Allocate a tensor with a chosen scalar fill value.</summary>
+
+**Signature**
+
+```python
+torch.full(size, fill_value, *, out=None, dtype=None,
+           layout=torch.strided, device=None, requires_grad=False)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `size` | Required | Tuple/list of output dimensions. |
+| `fill_value` | Required | Scalar placed in each element. |
+| `out` | `None` | Optional output tensor. |
+| `dtype` | `None` | Inferred from fill value when omitted; use int64 for labels. |
+| `layout` | `torch.strided` | Tensor memory layout. |
+| `device` | `None` | Allocation device. |
+| `requires_grad` | `False` | Record gradients for supported floating/complex dtypes. |
+
+**Example**
+
+```python
+# (B=2, T=3): labels whose positions initially have no supervision.
+labels = torch.full((2, 3), -100, dtype=torch.long)
+print(labels)
+```
+
+**Output**
+
+```text
+tensor([[-100, -100, -100],
+        [-100, -100, -100]])
+```
+
+`-100` is a loss-label sentinel here, not a valid model-input token ID.
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.full.html)
+
+</details>
+
+<details>
+<summary><code>Tensor.ne</code> — Select elements that differ from a value.</summary>
+
+**Signature**
+
+```python
+x.ne(other)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `other` | Required | Scalar or broadcastable tensor to compare with `x`. |
+
+**Example**
+
+```python
+# (B=1, T=3): two target IDs and one ignored position.
+labels = torch.tensor([[4, -100, 5]])
+print(labels.ne(-100))
+```
+
+**Output**
+
+```text
+tensor([[ True, False,  True]])
+```
+
+This returns a Boolean tensor, not the count of selected positions.
+Use `.sum()` or `.sum(dim=1)` when a count is needed.
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.Tensor.ne.html)
+
+</details>
+
+<details>
+<summary><code>Tensor.gather</code> — Select values using tensor-valued indices along one axis.</summary>
+
+**Signature**
+
+```python
+x.gather(dim, index, *, sparse_grad=False)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `dim` | Required | Axis along which `index` chooses entries. |
+| `index` | Required | int64 tensor with the same number of dimensions as `x`; determines output shape. |
+| `sparse_grad` | `False` | Request a sparse gradient with respect to the source tensor. |
+
+**Example**
+
+```python
+# (B=2, V=3): probability vectors for two predictions.
+scores = torch.tensor([[0.1, 0.8, 0.1], [0.2, 0.3, 0.5]])
+# (B=2, K=1): one selected vocabulary index per row.
+indices = torch.tensor([[1], [2]])
+print(scores.gather(1, indices))
+```
+
+**Output**
+
+```text
+tensor([[0.8000],
+        [0.5000]])
+```
+
+Source and index do not broadcast against each other. Gradients can flow to
+selected source values, not through the discrete integer indices.
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.Tensor.gather.html)
+
+</details>
+
+<details>
+<summary><code>nn.Module.state_dict</code> — Read named parameters and persistent buffers.</summary>
+
+**Signature**
+
+```python
+module.state_dict(*args, destination=None, prefix="", keep_vars=False)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `*args` | Empty | Legacy positional form; prefer keyword arguments. |
+| `destination` | `None` | Optional destination mapping; normally let PyTorch create it. |
+| `prefix` | `""` | Prefix added to parameter/buffer keys. |
+| `keep_vars` | `False` | Keep autograd associations instead of returning detached tensor references. |
+
+**Example**
+
+```python
+layer = nn.Linear(2, 1)
+print({name: tuple(tensor.shape) for name, tensor in layer.state_dict().items()})
+```
+
+**Output**
+
+```text
+{'weight': (1, 2), 'bias': (1,)}
+```
+
+The mapping is shallow: its tensors can share storage with the module.
+Detachment alone is not an independent snapshot. Lesson 22 uses
+`tensor.detach().cpu().clone()` when assembling its model snapshot.
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.nn.Module.html#torch.nn.Module.state_dict)
+
+</details>
+
+<details>
+<summary><code>nn.Module.load_state_dict</code> — Restore named parameter and buffer values.</summary>
+
+**Signature**
+
+```python
+module.load_state_dict(state_dict, strict=True, assign=False)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `state_dict` | Required | Mapping from parameter/buffer names to tensors. |
+| `strict` | `True` | Require the expected keys; incompatible shapes still need resolution. |
+| `assign` | `False` | Copy into the module's existing tensors; True instead preserves properties of supplied tensors. |
+
+**Example**
+
+```python
+source = nn.Linear(2, 1)
+target = nn.Linear(2, 1)
+result = target.load_state_dict(source.state_dict(), strict=True)
+print(result.missing_keys, result.unexpected_keys)
+print(torch.equal(source.weight, target.weight))
+```
+
+**Output**
+
+```text
+[] []
+True
+```
+
+Reconstruct the compatible architecture first. This does not restore tokenizer,
+optimizer, or RNG state. With `assign=True`, normally construct the optimizer
+after loading because parameter identities may change.
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.nn.Module.html#torch.nn.Module.load_state_dict)
+
+</details>
+
+<details>
+<summary><code>torch.save</code> — Serialize tensors and an explicitly chosen checkpoint payload.</summary>
+
+**Signature**
+
+```python
+torch.save(obj, f, pickle_module=pickle, pickle_protocol=2,
+           _use_new_zipfile_serialization=True,
+           _disable_byteorder_record=False)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `obj` | Required | Object to serialize; prefer tensors and plain configuration/metadata values. |
+| `f` | Required | Path or writable binary file-like object. |
+| `pickle_module` | `pickle` | Serializer for non-tensor metadata. |
+| `pickle_protocol` | `2` | Pickle protocol for metadata. |
+| `_use_new_zipfile_serialization` | `True` | Compatibility switch for archive format. |
+| `_disable_byteorder_record` | `False` | Internal option in the tested runtime; leave unchanged. |
+
+**Example**
+
+```python
+import io
+
+buffer = io.BytesIO()
+# (N=2,): illustrative model values in a plain checkpoint dictionary.
+weights = torch.tensor([1.0, 2.0])
+torch.save({"step": 40, "weights": weights}, buffer)
+print(buffer.tell() > 0)
+```
+
+**Output**
+
+```text
+True
+```
+
+Only the explicitly supplied payload is saved. Saving model weights does not
+automatically capture the optimizer, tokenizer, schedule, or random state.
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.save.html)
+
+</details>
+
+<details>
+<summary><code>torch.load</code> — Restore a trusted payload with explicit device and loading restrictions.</summary>
+
+**Signature**
+
+```python
+torch.load(f, map_location=None, pickle_module=None, *,
+           weights_only=True, mmap=None, **pickle_load_args)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `f` | Required | Path or readable/seekable binary file-like object. |
+| `map_location` | `None` | Device, mapping, or callable controlling storage restoration. |
+| `pickle_module` | `None` | Optional unpickler module; do not override casually. |
+| `weights_only` | `True` in the public signature | Restrict unpickling to supported tensors, primitives, and explicitly allowlisted types. |
+| `mmap` | `None` | Optional memory-mapped tensor-storage loading for compatible file archives. |
+| `**pickle_load_args` | Empty | Additional arguments to the unpickler, subject to loading-mode restrictions. |
+
+**Example**
+
+```python
+import io
+
+buffer = io.BytesIO()
+torch.save({"step": 40, "weights": torch.tensor([1.0, 2.0])}, buffer)
+buffer.seek(0)
+checkpoint = torch.load(buffer, map_location="cpu", weights_only=True)
+print(checkpoint["step"])
+print(checkpoint["weights"].tolist())
+```
+
+**Output**
+
+```text
+40
+[1.0, 2.0]
+```
+
+Some runtime signatures expose `weights_only=None` internally; current public
+behavior uses the restricted loader by default when no custom pickle module
+is supplied. Our examples always pass `weights_only=True` explicitly. It is
+not a guarantee that arbitrary untrusted files are safe; load only trusted
+artifacts. Do not fix an unfamiliar checkpoint error by automatically setting
+`weights_only=False`.
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.load.html)
+
+</details>
+
+<details>
+<summary><code>torch.serialization.safe_globals</code> — Temporarily allow known trusted types during restricted loading.</summary>
+
+**Signature**
+
+```python
+torch.serialization.safe_globals(safe_globals)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `safe_globals` | Required | List of trusted callable types/functions, or `(callable, qualified_name)` entries, allowed within the context. |
+
+**Example**
+
+```python
+import io
+from dataclasses import dataclass
+
+@dataclass
+class ToyConfig:
+    """Configuration written by this example, not an unknown third party."""
+
+    width: int
+
+buffer = io.BytesIO()
+torch.save({"config": ToyConfig(32)}, buffer)
+buffer.seek(0)
+with torch.serialization.safe_globals([ToyConfig]):
+    checkpoint = torch.load(buffer, weights_only=True)
+print(checkpoint["config"].width)
+```
+
+**Output**
+
+```text
+32
+```
+
+Allowlisting is a trust decision, not validation of an arbitrary checkpoint.
+Lesson 22 uses the known project `GPTConfig` class for the older pretrained
+checkpoint. Its new SFT snapshot instead stores `asdict(config)`, so restoring
+that configuration does not require a custom-class allowlist.
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/notes/serialization.html#torch.serialization.safe_globals)
+
+</details>
+
+### Existing API revisited — assistant-only cross-entropy
+
+This extends the existing `F.cross_entropy` entry; it is not a ninth API.
+
+```python
+# (B=1, T=3, V=4): vocabulary logits at three prediction positions.
+logits = torch.zeros(1, 3, 4, requires_grad=True)
+# (B=1, T=3): ignore the first target, supervise the final two.
+labels = torch.tensor([[-100, 2, 3]])
+loss = F.cross_entropy(
+    logits.reshape(-1, 4), labels.reshape(-1), ignore_index=-100
+)
+loss.backward()
+print(loss.detach())
+print(logits.grad[0, 0])
+```
+
+**Output**
+
+```text
+tensor(1.3863)
+tensor([0., 0., 0., 0.])
+```
+
+With unweighted class-index targets and no label smoothing, the mean divides
+by the number of non-ignored target positions. Reject empty supervision before
+averaging. The zero direct gradient at ignored logits does not detach earlier
+prompt embeddings from later supervised predictions through causal attention.
+
+`copy.deepcopy`, `dataclasses.asdict`, and Plotly are useful here but are not
+PyTorch APIs and are not counted in this reference.
+
 ## Learning history
 
 <details>
@@ -3260,6 +3651,14 @@ The RL primitives extracted after Lesson 21A live in `src/llmfp/rl/`; their regr
 - `Tensor.item`, `Tensor.tolist`, `Tensor.float` — extract scalar diagnostics, display token sequences, and convert numeric dtypes.
 
 **Chapter closure (October 2026):** All 13 APIs added during Lesson 21B have been explained with a signature, parameter descriptions, a runnable common example, and its output. No additional PyTorch API entries were needed for the final lesson audit.
+
+### Lesson 22 — Supervised Fine-Tuning (complete)
+
+- Revisited `F.cross_entropy`, `Tensor.masked_fill`, `torch.autograd.grad`, and `torch.no_grad` for supervision masking, gradient inspection, and evaluation.
+- Indexed eight previously untracked APIs used by this chapter: `torch.full`, `Tensor.ne`, `Tensor.gather`, `nn.Module.state_dict`, `nn.Module.load_state_dict`, `torch.save`, `torch.load`, and `torch.serialization.safe_globals`. Their signatures, parameter tables, common examples, and captured outputs appear above.
+- The eight new entries and the additional cross-entropy example were executed on CPU with Python 3.13.5 / PyTorch 2.10.0. This is separate from the user's notebook training run and does not validate the requested PyTorch 2.14/CUDA environment.
+- The source extraction is limited to target shifting, right-padded batches, and per-example NLL. See [the audit](docs/lesson_22_extraction_audit.md). Task templates, plotting, and the toy experiment remain in the teaching notebook.
+
 
 </details>
 
