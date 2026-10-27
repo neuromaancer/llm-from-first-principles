@@ -139,7 +139,7 @@ The framework will grow only after mechanisms are derived and verified in the le
 | Lesson | Topic | Status |
 |---|---|---|
 | [22](lessons/22_supervised_fine_tuning.ipynb) | Supervised Fine-Tuning (SFT) | ✅ Complete |
-| 23 | Preference Data, Sequence Log-Probabilities, and Reward Modeling | Planned |
+| [23](lessons/23_preference_data_and_reward_modeling.ipynb) | Preference Data, Sequence Log-Probabilities, and Reward Modeling | ✅ Complete |
 | 24 | RLHF with PPO and KL Regularization | Planned |
 | 25 | Direct Preference Optimization (DPO) | Planned |
 | 26 | Modern LLM RL and Preference Optimization | Planned |
@@ -147,6 +147,10 @@ The framework will grow only after mechanisms are derived and verified in the le
 The post-training section will connect token-level language modeling to sequence-level optimization. It will make explicit the roles of completion log-probabilities, reference policies, KL penalties, pairwise preferences, learned rewards, and policy optimization before using higher-level training frameworks.
 
 **Lesson 22 is complete.** It connects assistant-target alignment, masking and right-padded batches to full-parameter fine-tuning of the Lesson 16 pretrained GPT, followed by teacher-forced diagnostics, greedy generation, and a Plotly evaluation heatmap. Three verified token/tensor primitives now live in `llmfp.data.supervision` and `llmfp.training.losses`; text templates, toy data, experiment loops, and plotting remain in the notebook. See the [Lesson 22 extraction audit](docs/lesson_22_extraction_audit.md) for the precise contracts, tests, and exclusions.
+
+---
+
+**Lesson 23 is complete.** It links teacher-forced completion log-probabilities to pairwise Bradley–Terry preference learning and a frozen-backbone GPT reward-head experiment. Two reusable math primitives have been extracted to `llmfp.training`: completion sequence log-probability and Bradley–Terry loss. The notebook retains the synthetic pairs, reward-head prototype, train/evaluation runners, and Plotly figures. See the [Lesson 23 extraction audit](docs/lesson_23_extraction_audit.md).
 
 ---
 
@@ -445,7 +449,8 @@ llm-from-first-principles/
 │   ├── 20_actor_critic_td_and_gae.ipynb
 │   ├── 21a_ppo_from_scratch.ipynb
 │   ├── 21b_ppo_with_tiny_gpt.ipynb
-│   └── 22_supervised_fine_tuning.ipynb
+│   ├── 22_supervised_fine_tuning.ipynb
+│   └── 23_preference_data_and_reward_modeling.ipynb
 │
 ├── src/
 │   └── llmfp/
@@ -487,9 +492,11 @@ llm-from-first-principles/
 │
 ├── tests/
 │   ├── test_ppo_primitives.py
-│   └── test_supervised_primitives.py
+│   ├── test_supervised_primitives.py
+│   └── test_preference_primitives.py
 ├── docs/
-│   └── lesson_22_extraction_audit.md
+│   ├── lesson_22_extraction_audit.md
+│   └── lesson_23_extraction_audit.md
 ├── data/                # large/generated datasets are not committed
 ├── checkpoints/         # ignored
 ├── TORCH_FUNCTIONS.md   # PyTorch API learning tracker
@@ -541,9 +548,9 @@ The Git history is part of the learning record: small commits make it possible t
 
 ## Current status
 
-**Completed:** Lessons 00–22, including supervised fine-tuning and the Lesson 21 PPO sequence.
+**Completed:** Lessons 00–23, including supervised fine-tuning, pairwise preference learning, and the Lesson 21 PPO sequence.
 
-**Next lesson:** 23 — Preference Data, Sequence Log-Probabilities, and Reward Modeling.
+**Next lesson:** 24 — RLHF with PPO and KL Regularization.
 
 ### Lesson 21 closure — from PPO equations to GPT updates
 
@@ -606,3 +613,24 @@ Exact match requires the expected first response line plus an observed newline w
 **Verification boundary:** The experiment numbers and checkpoint-restoration message above are saved outputs in the user's notebook at commit `2a4935748b597e786e126554f1991379eb1c615c`; the assistant did not rerun that pretrained-checkpoint experiment. The 12 new supervised primitive tests were run in isolation on CPU with Python 3.13.5 / PyTorch 2.10.0. This is not a verification of the declared `torch>=2.14.0` environment, CUDA execution, or a newly completed full-notebook Run All. The existing 16 PPO tests were not rerun during this extraction; the normal repository test-discovery command above includes both suites.
 
 The next conceptual step is **Lesson 23**: complete-response log-probabilities, preference pairs, and reward modeling. It connects supervised token prediction to the sequence-level objectives used later in RLHF and DPO.
+
+### Lesson 23 closure — preference signals versus policy likelihood
+
+The [preference learning notebook](lessons/23_preference_data_and_reward_modeling.ipynb) builds synthetic prompt-conditioned chosen/rejected pairs, scores whole completions by summing correctly aligned next-token log-probabilities, demonstrates length and masking effects, derives the Bradley–Terry (BT) loss and gradients, and trains a **frozen-backbone** GPT scalar reward head. It finishes by comparing reward ranking with the original SFT policy's teacher-forced likelihood ranking.
+
+The reward head uses the final real-token hidden state (not a padding position) from the 256-dimensional GPT backbone. Only the linear reward head was optimized for 80 steps; the BT training loss fell from **0.693147 to 0.019112**, and the reward-head weight-change norm was about **4.19385**. The backbone is not fine-tuned in this experiment.
+
+| Evaluation split | Learned reward ranking | SFT completion-logP ranking |
+|---|---:|---:|
+| Three synthetic **training** pairs | **3/3** | **2/3** |
+| Three manually designed **held-out** probes | **1/3** | **0/3** |
+
+On the held-out probes, the reward margins were **−1.290** for `Say welcome`, **+2.590** for `Say please`, and **−2.829** for `Say goodbye`. The reward model corrected the SFT likelihood ranking of the training pair `Say no` but did not reliably transfer to the three unseen prompts. Scores are not directly comparable in magnitude across the two models: policy log-probability is not a learned preference reward. BT probabilities are not demonstrated to be calibrated to real human preferences.
+
+**Modeling and evaluation boundaries:** Preference labels and probes were manually written, not sampled from a representative human-judgment distribution. The reward head used a frozen SFT Transformer; this is not full reward-model fine-tuning. Results are from one saved notebook run with three training and three held-out pairs, not a generalization benchmark, repeated-seed study, or causal analysis of failure. Each policy completion score includes the terminating newline character in the character tokenizer. The reward model's source-level wrapper is not yet reusable across arbitrary backbones, and no portable reward-model checkpoint was saved.
+
+**Reusable math:** `completion_sequence_log_probs(logits, labels)` applies stable log-softmax, gathers already aligned completion targets, masks ignored prompt/padding labels, and **sums** (never silently averages) into one differentiable log-probability per candidate. `bradley_terry_loss(chosen_rewards, rejected_rewards)` uses `softplus(rejected - chosen)` with selectable loss reduction. Both live in [`src/llmfp/training/losses.py`](src/llmfp/training/losses.py), alongside the Lesson 22 mean-NLL helper. The [Lesson 23 extraction audit](docs/lesson_23_extraction_audit.md) documents their exact contracts, 12 focused tests and rejected abstraction candidates.
+
+**Verification boundary:** The reported numeric outcomes and Plotly visualizations are saved outputs in the learner's notebook at commit `02f332f73c57680d46db99f8fbcc54d8260bd889`. The new tests were exercised separately on CPU with Python 3.13.5 and PyTorch 2.10.0, rather than on the user's PyTorch 2.14/CUDA environment. The complete upstream repository test suite, checkpoint-backed notebook and full Restart Kernel → Run All were not rerun during this extraction. Notebook cells and saved outputs were not modified.
+
+The next conceptual step is **Lesson 24 — RLHF with PPO and KL Regularization**, which brings together SFT policy scores, preference rewards, reference policies and policy optimization.

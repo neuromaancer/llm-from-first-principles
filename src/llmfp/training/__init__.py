@@ -5,7 +5,11 @@ from .checkpoint import (
     save_training_checkpoint,
 )
 from .evaluation import estimate_language_model_loss
-from .losses import per_example_sft_nll
+from .losses import (
+    bradley_terry_loss,
+    completion_sequence_log_probs,
+    per_example_sft_nll,
+)
 from .schedules import (
     cosine_decay,
     linear_warmup,
@@ -18,6 +22,8 @@ from .steps import (
 
 __all__ = [
     "TrainingStepResult",
+    "bradley_terry_loss",
+    "completion_sequence_log_probs",
     "cosine_decay",
     "estimate_language_model_loss",
     "language_model_training_step",

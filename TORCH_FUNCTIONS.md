@@ -1,6 +1,6 @@
 # PyTorch Function Reference
 
-A learning reference for **LLM from First Principles** — **89 tracked API entries**, reviewed through completed Lesson 22.
+A learning reference for **LLM from First Principles** — **95 tracked API entries**, reviewed through completed Lesson 23.
 
 Open a function to see its **signature → parameters → example → output**. The examples show common calls; the parameter tables cover the optional arguments separately.
 
@@ -14,6 +14,7 @@ Open a function to see its **signature → parameters → example → output**. 
 | [Optimization](#optimization-and-training) | 9 |
 | [Neural-network utilities](#neural-network-utilities) | 10 |
 | [Lesson 22: supervision & checkpoints](#lesson-22--supervision-and-checkpoint-apis) | 8 |
+| [Lesson 23: preference & reward heads](#lesson-23--preference-and-reward-head-apis) | 6 |
 
 ## Shared setup
 
@@ -31,7 +32,7 @@ torch.set_printoptions(precision=4, sci_mode=False, linewidth=80)
 
 **Notation:** `x` is an existing tensor; `optimizer` is an optimizer instance. `*` introduces keyword-only arguments; `*size` accepts multiple dimensions. Arguments with no default are required. A trailing `_` usually denotes an in-place operation.
 
-**Output check:** The original 81 examples were executed in the prior review on CPU with **PyTorch 2.10.0 / Python 3.13.5**. The repository requests `torch>=2.14.0`; these outputs are not a test of that environment. Seeded random values and numerical formatting can differ across versions/devices. Internal, deprecated, and overload-specific options are labeled rather than forced into the examples.
+**Output check:** The original 81 examples, eight Lesson 22 additions, and six Lesson 23 additions were executed during their respective reviews on CPU with **PyTorch 2.10.0 / Python 3.13.5**. The repository requests `torch>=2.14.0`; these outputs are not a test of that environment. Seeded random values and numerical formatting can differ across versions/devices. Internal, deprecated, and overload-specific options are labeled rather than forced into the examples.
 
 ## Tensor creation and shape operations
 
@@ -1044,6 +1045,8 @@ print(torch.log(x))
 ```text
 tensor([-1.3863, -0.6931,  0.0000])
 ```
+
+`x.log()` is the equivalent Tensor method used in Lesson 23's chain-rule experiment; it shares the same element-wise operation and is not counted as a separate API entry.
 
 [PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.log.html)
 
@@ -3581,6 +3584,240 @@ prompt embeddings from later supervised predictions through causal attention.
 `copy.deepcopy`, `dataclasses.asdict`, and Plotly are useful here but are not
 PyTorch APIs and are not counted in this reference.
 
+## Lesson 23 — Preference and reward-head APIs
+
+
+
+Six APIs used and understood during Lesson 23 are newly indexed below. They are not necessarily new to PyTorch or the first use of equivalent methods in this learning project. The common examples were executed on CPU with Python 3.13.5 and PyTorch 2.10.0. This does not validate the project's declared `torch>=2.14.0` or CUDA environment.
+
+
+
+<details>
+<summary><code>Tensor.prod</code> — Multiply tensor elements along a dimension.</summary>
+
+**Signature**
+
+```python
+x.prod(dim=None, keepdim=False, dtype=None)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `dim` | `None` | Axis to multiply; None multiplies all elements. |
+| `keepdim` | `False` | Preserve a size-one axis when dim is provided. |
+| `dtype` | `None` | Optional dtype used for accumulation. |
+
+**Example**
+
+```python
+# (T=2,): conditional probabilities of two output tokens
+token_probs = torch.tensor([0.8, 0.9])
+print(token_probs.prod())
+```
+
+**Output**
+
+```text
+tensor(0.7200)
+```
+
+Token probabilities may underflow when multiplied across a long sequence; summing their logarithms is numerically preferable.
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.Tensor.prod.html)
+
+</details>
+
+<details>
+<summary><code>torch.sigmoid</code> — Map a Bradley–Terry reward margin to a probability.</summary>
+
+**Signature**
+
+```python
+torch.sigmoid(input, *, out=None)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `input` | `Required` | Reward margins or other real-valued logits. |
+| `out` | `None` | Optional output tensor. |
+
+**Example**
+
+```python
+# (N=3,): three chosen-minus-rejected reward margins
+margins = torch.tensor([-2.0, 0.0, 2.0])
+print(torch.sigmoid(margins))
+```
+
+**Output**
+
+```text
+tensor([0.1192, 0.5000, 0.8808])
+```
+
+The sigmoid probability depends on the reward difference, not the absolute reward baseline.
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.sigmoid.html)
+
+</details>
+
+<details>
+<summary><code>F.softplus</code> — Compute a stable smooth positive function for BT loss.</summary>
+
+**Signature**
+
+```python
+F.softplus(input, beta=1, threshold=20)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `input` | `Required` | Input tensor; use rejected minus chosen reward for BT loss. |
+| `beta` | `1` | Controls the curvature of softplus. |
+| `threshold` | `20` | Switch to a linear approximation when beta times input exceeds the threshold. |
+
+**Example**
+
+```python
+# (N=3,): inputs corresponding to different BT reward margins
+values = torch.tensor([-2.0, 0.0, 2.0])
+print(F.softplus(values))
+```
+
+**Output**
+
+```text
+tensor([0.1269, 0.6931, 2.1269])
+```
+
+For a BT pair with margin = chosen - rejected, the observed preference loss is F.softplus(-margin). This is stable for extreme margins.
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.nn.functional.softplus.html)
+
+</details>
+
+<details>
+<summary><code>F.logsigmoid</code> — Compute log-sigmoid stably without log(sigmoid(x)).</summary>
+
+**Signature**
+
+```python
+F.logsigmoid(input)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `input` | `Required` | Real-valued logits or reward margins. |
+
+**Example**
+
+```python
+# (N=3,): chosen-minus-rejected BT reward margins
+margins = torch.tensor([-2.0, 0.0, 2.0])
+print(F.logsigmoid(margins))
+```
+
+**Output**
+
+```text
+tensor([-2.1269, -0.6931, -0.1269])
+```
+
+The BT negative log-likelihood equals -F.logsigmoid(margin) = F.softplus(-margin).
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.nn.functional.logsigmoid.html)
+
+</details>
+
+<details>
+<summary><code>F.linear</code> — Apply a linear projection with explicitly supplied weights.</summary>
+
+**Signature**
+
+```python
+F.linear(input, weight, bias=None)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `input` | `Required` | Feature tensor of shape (*, C_in). |
+| `weight` | `Required` | Projection matrix of shape (C_out, C_in). |
+| `bias` | `None` | Optional vector of shape (C_out,). |
+
+**Example**
+
+```python
+# (B=2, C_in=2): contextual feature vectors
+features = torch.tensor([[1.0, 2.0], [3.0, 4.0]])
+# (C_out=2, C_in=2): output projection weights
+weight = torch.tensor([[1.0, 0.0], [0.0, 2.0]])
+# (C_out=2,): output biases
+bias = torch.tensor([0.5, -0.5])
+print(F.linear(features, weight, bias))
+```
+
+**Output**
+
+```text
+tensor([[1.5000, 3.5000],
+        [3.5000, 7.5000]])
+```
+
+Lesson 23 used this to verify that the reward model's copied GPT hidden states reproduce the original LM-head logits; a scalar reward head uses C_out=1.
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.nn.functional.linear.html)
+
+</details>
+
+<details>
+<summary><code>nn.Module.requires_grad_</code> — Freeze or unfreeze registered module parameters in place.</summary>
+
+**Signature**
+
+```python
+module.requires_grad_(requires_grad=True)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `requires_grad` | `True` | Whether to record gradients for the module's parameters. |
+
+**Example**
+
+```python
+head = nn.Linear(2, 1)
+head.requires_grad_(False)
+print([parameter.requires_grad for parameter in head.parameters()])
+head.requires_grad_(True)
+print([parameter.requires_grad for parameter in head.parameters()])
+```
+
+**Output**
+
+```text
+[False, False]
+[True, True]
+```
+
+Unlike module.eval(), this changes parameter gradient tracking; unlike torch.no_grad(), it does not disable recording of unrelated differentiable operations.
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.nn.Module.html#torch.nn.Module.requires_grad_)
+
+</details>
+
+
 ## Learning history
 
 <details>
@@ -3659,6 +3896,15 @@ The RL primitives extracted after Lesson 21A live in `src/llmfp/rl/`; their regr
 - The eight new entries and the additional cross-entropy example were executed on CPU with Python 3.13.5 / PyTorch 2.10.0. This is separate from the user's notebook training run and does not validate the requested PyTorch 2.14/CUDA environment.
 - The source extraction is limited to target shifting, right-padded batches, and per-example NLL. See [the audit](docs/lesson_22_extraction_audit.md). Task templates, plotting, and the toy experiment remain in the teaching notebook.
 
+
+### Lesson 23 — Preference Data and Reward Modeling (complete)
+
+- `Tensor.prod` was used to demonstrate the probability chain rule. The `Tensor.log` alias is explained under the existing `torch.log` entry rather than counted separately.
+- `torch.sigmoid`, `F.softplus`, and `F.logsigmoid` were used for Bradley–Terry preference probabilities, stable pairwise negative log-likelihoods, and gradient analysis.
+- `F.linear` checked copied GPT feature equivalence; `nn.Module.requires_grad_` froze the SFT Transformer while leaving a scalar reward head trainable.
+- Newly indexed six APIs with tested signatures, parameter tables, and captured example outputs. Existing `F.log_softmax`, `Tensor.gather`, `F.cross_entropy`, checkpoint APIs, AdamW, and Plotly were reused without duplicate entries.
+- Extracted `completion_sequence_log_probs` and `bradley_terry_loss` into `src/llmfp/training/losses.py`, with 12 focused CPU tests. The frozen reward-head prototype, text serialization, tiny preference dataset, training loop, and Plotly plots remain in the notebook. See [Lesson 23 extraction audit](docs/lesson_23_extraction_audit.md).
+- New examples were checked with CPU Python 3.13.5 / PyTorch 2.10.0, independently of the user's checkpoint-backed CUDA notebook. No claim of a full upstream test-suite run or general human preference calibration is made.
 
 </details>
 
