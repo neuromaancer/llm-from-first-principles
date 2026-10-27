@@ -10,5 +10,7 @@
         88
     ],
     "files.trimTrailingWhitespace": true,
-    "files.insertFinalNewline": true
+    "files.insertFinalNewline": true,
+    "ruff.lint.preview": true,
+    "editor.hideCursorInOverviewRuler": true
 }
