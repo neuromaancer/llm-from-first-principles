@@ -140,7 +140,7 @@ The framework will grow only after mechanisms are derived and verified in the le
 |---|---|---|
 | [22](lessons/22_supervised_fine_tuning.ipynb) | Supervised Fine-Tuning (SFT) | ✅ Complete |
 | [23](lessons/23_preference_data_and_reward_modeling.ipynb) | Preference Data, Sequence Log-Probabilities, and Reward Modeling | ✅ Complete |
-| 24 | RLHF with PPO and KL Regularization | Planned |
+| [24](lessons/24_rlhf_with_ppo_and_kl.ipynb) | RLHF with PPO and KL Regularization | ✅ Complete |
 | 25 | Direct Preference Optimization (DPO) | Planned |
 | 26 | Modern LLM RL and Preference Optimization | Planned |
 
@@ -450,7 +450,8 @@ llm-from-first-principles/
 │   ├── 21a_ppo_from_scratch.ipynb
 │   ├── 21b_ppo_with_tiny_gpt.ipynb
 │   ├── 22_supervised_fine_tuning.ipynb
-│   └── 23_preference_data_and_reward_modeling.ipynb
+│   ├── 23_preference_data_and_reward_modeling.ipynb
+│   └── 24_rlhf_with_ppo_and_kl.ipynb
 │
 ├── src/
 │   └── llmfp/
@@ -472,6 +473,7 @@ llm-from-first-principles/
 │       │   ├── __init__.py
 │       │   ├── advantages.py
 │       │   ├── alignment.py
+│       │   ├── kl.py
 │       │   ├── policy_gradient.py
 │       │   ├── ppo.py
 │       │   ├── returns.py
@@ -493,10 +495,12 @@ llm-from-first-principles/
 ├── tests/
 │   ├── test_ppo_primitives.py
 │   ├── test_supervised_primitives.py
-│   └── test_preference_primitives.py
+│   ├── test_preference_primitives.py
+│   └── test_rlhf_kl_primitives.py
 ├── docs/
 │   ├── lesson_22_extraction_audit.md
-│   └── lesson_23_extraction_audit.md
+│   ├── lesson_23_extraction_audit.md
+│   └── lesson_24_extraction_audit.md
 ├── data/                # large/generated datasets are not committed
 ├── checkpoints/         # ignored
 ├── TORCH_FUNCTIONS.md   # PyTorch API learning tracker

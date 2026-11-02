@@ -1,6 +1,6 @@
 # PyTorch Function Reference
 
-A learning reference for **LLM from First Principles** — **95 tracked API entries**, reviewed through completed Lesson 23.
+A learning reference for **LLM from First Principles** — **99 tracked API entries**, reviewed through completed Lesson 24.
 
 Open a function to see its **signature → parameters → example → output**. The examples show common calls; the parameter tables cover the optional arguments separately.
 
@@ -15,6 +15,7 @@ Open a function to see its **signature → parameters → example → output**. 
 | [Neural-network utilities](#neural-network-utilities) | 10 |
 | [Lesson 22: supervision & checkpoints](#lesson-22--supervision-and-checkpoint-apis) | 8 |
 | [Lesson 23: preference & reward heads](#lesson-23--preference-and-reward-head-apis) | 6 |
+| [Lesson 24: KL-regularized RLHF](#lesson-24--kl-regularized-rlhf-apis) | 4 |
 
 ## Shared setup
 
@@ -32,7 +33,7 @@ torch.set_printoptions(precision=4, sci_mode=False, linewidth=80)
 
 **Notation:** `x` is an existing tensor; `optimizer` is an optimizer instance. `*` introduces keyword-only arguments; `*size` accepts multiple dimensions. Arguments with no default are required. A trailing `_` usually denotes an in-place operation.
 
-**Output check:** The original 81 examples, eight Lesson 22 additions, and six Lesson 23 additions were executed during their respective reviews on CPU with **PyTorch 2.10.0 / Python 3.13.5**. The repository requests `torch>=2.14.0`; these outputs are not a test of that environment. Seeded random values and numerical formatting can differ across versions/devices. Internal, deprecated, and overload-specific options are labeled rather than forced into the examples.
+**Output check:** The original 81 examples, eight Lesson 22 additions, six Lesson 23 additions, and four Lesson 24 additions were executed during their respective reviews on CPU with **PyTorch 2.10.0 / Python 3.13.5**. The repository requests `torch>=2.14.0`; these outputs are not a test of that environment. Seeded random values and numerical formatting can differ across versions/devices. Internal, deprecated, and overload-specific options are labeled rather than forced into the examples.
 
 ## Tensor creation and shape operations
 
@@ -3818,6 +3819,162 @@ Unlike module.eval(), this changes parameter gradient tracking; unlike torch.no_
 </details>
 
 
+## Lesson 24 — KL-regularized RLHF APIs
+
+
+
+Four previously unindexed APIs used in Lesson 24 appear below. The signature, arguments, and sample output were checked on CPU with Python 3.13.5 / PyTorch 2.10.0; this is separate from the learner's CUDA notebook and does not validate the declared `torch>=2.14.0` environment.
+
+
+
+<details>
+<summary><code>torch.Generator</code> — Create a dedicated random-number generator for reproducible sampling.</summary>
+
+**Signature**
+
+```python
+torch.Generator(device='cpu')
+generator.manual_seed(seed)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `device` | `'cpu'` | Device for the RNG; must match the sampling operation's device. |
+| `seed` | `Required by manual_seed` | Integer seed used to initialize a reproducible generator state. |
+
+**Example**
+
+```python
+# (Y=2,): two possible response probabilities
+probabilities = torch.tensor([0.2, 0.8])
+rng = torch.Generator(device="cpu").manual_seed(2403)
+# (N=6,): categorical samples produced by the dedicated RNG
+print(torch.multinomial(probabilities, num_samples=6, replacement=True, generator=rng))
+```
+
+**Output**
+
+```text
+tensor([1, 0, 1, 1, 1, 1])
+```
+
+The generator has its own advancing random state. Using the same seed is useful for controlled experiments but does not guarantee identical samples across different devices or library versions. The notebook used a device-matched generator for autoregressive sampling.
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.Generator.html)
+
+</details>
+
+<details>
+<summary><code>Tensor.std</code> — Measure the spread of advantages for normalization.</summary>
+
+**Signature**
+
+```python
+x.std(dim=None, *, correction=1, keepdim=False)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `dim` | `None` | Optional reduction dimension(s); None reduces all entries. |
+| `correction` | `1` | Bessel correction to sample variance; 0 computes population standard deviation. |
+| `keepdim` | `False` | Preserve reduced axes as size-one dimensions. |
+
+**Example**
+
+```python
+# (N=3,): illustrative valid-action advantages
+advantages = torch.tensor([1.0, 3.0, 5.0])
+print(advantages.std(correction=0))
+```
+
+**Output**
+
+```text
+tensor(1.6330)
+```
+
+Lesson 24 used the equivalent legacy spelling std(unbiased=False) on valid-action advantages. Always exclude padded actions when estimating the normalization statistics.
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.Tensor.std.html)
+
+</details>
+
+<details>
+<summary><code>Tensor.clamp_min</code> — Enforce a lower bound on an unstable denominator.</summary>
+
+**Signature**
+
+```python
+x.clamp_min(min)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `min` | `Required` | Lower scalar bound; entries below it are replaced by this value. |
+
+**Example**
+
+```python
+# (N=3,): candidate denominators, including a negative value
+denominators = torch.tensor([-2.0, 0.5, 1.5])
+print(denominators.clamp_min(0.1))
+```
+
+**Output**
+
+```text
+tensor([0.1000, 0.5000, 1.5000])
+```
+
+In Lesson 24, std.clamp_min(1e-8) guards advantage normalization against division by (near) zero. It does not create a useful learning signal when the batch has no advantage variation.
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.Tensor.clamp_min.html)
+
+</details>
+
+<details>
+<summary><code>torch.flip</code> — Reverse selected dimensions when computing backward returns.</summary>
+
+**Signature**
+
+```python
+torch.flip(input, dims)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `input` | `Required` | Input tensor whose entries are to be reversed. |
+| `dims` | `Required` | Sequence of dimension indices to reverse. |
+
+**Example**
+
+```python
+# (T=3,): immediate rewards in chronological order
+rewards = torch.tensor([1, 2, 3])
+print(torch.flip(rewards, dims=[0]))
+```
+
+**Output**
+
+```text
+tensor([3, 2, 1])
+```
+
+A backward cumulative return can be calculated by flipping rewards, applying cumsum, and flipping the result back. Unlike a view-only reverse, torch.flip creates a copy.
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.flip.html)
+
+</details>
+
+
 ## Learning history
 
 <details>
@@ -3905,6 +4062,13 @@ The RL primitives extracted after Lesson 21A live in `src/llmfp/rl/`; their regr
 - Newly indexed six APIs with tested signatures, parameter tables, and captured example outputs. Existing `F.log_softmax`, `Tensor.gather`, `F.cross_entropy`, checkpoint APIs, AdamW, and Plotly were reused without duplicate entries.
 - Extracted `completion_sequence_log_probs` and `bradley_terry_loss` into `src/llmfp/training/losses.py`, with 12 focused CPU tests. The frozen reward-head prototype, text serialization, tiny preference dataset, training loop, and Plotly plots remain in the notebook. See [Lesson 23 extraction audit](docs/lesson_23_extraction_audit.md).
 - New examples were checked with CPU Python 3.13.5 / PyTorch 2.10.0, independently of the user's checkpoint-backed CUDA notebook. No claim of a full upstream test-suite run or general human preference calibration is made.
+
+### Lesson 24 — RLHF with PPO and KL Regularization (complete)
+
+- Reused earlier `torch.multinomial`, `torch.log_softmax`, `torch.softmax`, `Tensor.gather`, `F.softplus`, `torch.no_grad`, `torch.optim.AdamW`, `torch.nn.utils.clip_grad_norm_`, and the existing PPO/GAE primitives without duplicate reference entries.
+- Indexed four newly used APIs: `torch.Generator` for seeded rollout sampling, `Tensor.std` for valid-action advantage normalization, `Tensor.clamp_min` for numerical denominator bounds, and `torch.flip` for independent Monte Carlo return checks.
+- Extracted two reusable RLHF operations into `llmfp.rl.kl`: conditional categorical forward KL at supplied states and frozen rollout KL-shaped rewards with terminal/truncation boundaries. The new 12 focused regression tests passed on CPU Python 3.13.5 / PyTorch 2.10.0 in isolated module checks. No full checkpoint-backed notebook rerun or upstream full-suite run was performed.
+- The toy reward model and four-cycle PPO loop stay in the notebook; they are not a reusable trainer or evidence of improved instruction following. See [Lesson 24 extraction audit](docs/lesson_24_extraction_audit.md).
 
 </details>
 
