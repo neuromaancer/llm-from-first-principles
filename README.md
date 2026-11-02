@@ -141,7 +141,7 @@ The framework will grow only after mechanisms are derived and verified in the le
 | [22](lessons/22_supervised_fine_tuning.ipynb) | Supervised Fine-Tuning (SFT) | ✅ Complete |
 | [23](lessons/23_preference_data_and_reward_modeling.ipynb) | Preference Data, Sequence Log-Probabilities, and Reward Modeling | ✅ Complete |
 | [24](lessons/24_rlhf_with_ppo_and_kl.ipynb) | RLHF with PPO and KL Regularization | ✅ Complete |
-| 25 | Direct Preference Optimization (DPO) | Planned |
+| [25](lessons/25_direct_preference_optimization.ipynb) | Direct Preference Optimization (DPO) | ✅ Complete |
 | 26 | Modern LLM RL and Preference Optimization | Planned |
 
 The post-training section will connect token-level language modeling to sequence-level optimization. It will make explicit the roles of completion log-probabilities, reference policies, KL penalties, pairwise preferences, learned rewards, and policy optimization before using higher-level training frameworks.
@@ -451,7 +451,8 @@ llm-from-first-principles/
 │   ├── 21b_ppo_with_tiny_gpt.ipynb
 │   ├── 22_supervised_fine_tuning.ipynb
 │   ├── 23_preference_data_and_reward_modeling.ipynb
-│   └── 24_rlhf_with_ppo_and_kl.ipynb
+│   ├── 24_rlhf_with_ppo_and_kl.ipynb
+│   └── 25_direct_preference_optimization.ipynb
 │
 ├── src/
 │   └── llmfp/
@@ -493,6 +494,7 @@ llm-from-first-principles/
 │           └── metrics.py
 │
 ├── tests/
+│   ├── test_dpo_loss.py
 │   ├── test_ppo_primitives.py
 │   ├── test_supervised_primitives.py
 │   ├── test_preference_primitives.py
@@ -500,7 +502,8 @@ llm-from-first-principles/
 ├── docs/
 │   ├── lesson_22_extraction_audit.md
 │   ├── lesson_23_extraction_audit.md
-│   └── lesson_24_extraction_audit.md
+│   ├── lesson_24_extraction_audit.md
+│   └── lesson_25_extraction_audit.md
 ├── data/                # large/generated datasets are not committed
 ├── checkpoints/         # ignored
 ├── TORCH_FUNCTIONS.md   # PyTorch API learning tracker

@@ -1,5 +1,6 @@
 """Supervised and preference losses for LLM post-training."""
 
+import math
 from typing import Literal
 
 import torch
@@ -167,8 +168,72 @@ def bradley_terry_loss(
     return losses.mean()
 
 
+def dpo_loss(
+    policy_chosen_logps: torch.Tensor,
+    policy_rejected_logps: torch.Tensor,
+    reference_chosen_logps: torch.Tensor,
+    reference_rejected_logps: torch.Tensor,
+    *,
+    beta: float = 0.1,
+    reduction: Literal["none", "mean", "sum"] = "mean",
+) -> torch.Tensor:
+    """Compute reference-corrected DPO loss on paired sequence log-probabilities.
+
+    Args:
+        policy_chosen_logps: (B,) trainable policy logP for chosen completions.
+        policy_rejected_logps: (B,) policy logP for rejected completions.
+        reference_chosen_logps: (B,) fixed reference logP for chosen completions.
+        reference_rejected_logps: (B,) fixed reference logP for rejected completions.
+            Every logP is a SUM over the complete selected response tokens,
+            including a terminator only when the caller scored one.
+        beta: Finite, strictly positive preference temperature/coefficient.
+        reduction: 'none' returns (B,), 'mean' or 'sum' returns scalar loss.
+
+    Returns:
+        Per-pair or reduced -logsigmoid(beta * (policy_margin - reference_margin)).
+        Autograd flows through policy log-probs only. Reference inputs detach
+        internally; callers should still keep their reference model frozen.
+
+    Raises:
+        ValueError: If beta, reduction, shape, dtype, device or values are invalid.
+    """
+    if not isinstance(beta, (int, float)) or isinstance(beta, bool) or not math.isfinite(beta) or beta <= 0:
+        raise ValueError("beta must be finite and strictly positive.")
+    if reduction not in ("none", "mean", "sum"):
+        raise ValueError("reduction must be 'none', 'mean', or 'sum'.")
+
+    tensors = (
+        policy_chosen_logps,
+        policy_rejected_logps,
+        reference_chosen_logps,
+        reference_rejected_logps,
+    )
+    if policy_chosen_logps.ndim != 1 or policy_chosen_logps.numel() == 0:
+        raise ValueError("Sequence log-probabilities must have nonempty shape (B,).")
+    if any(t.shape != policy_chosen_logps.shape for t in tensors):
+        raise ValueError("All sequence log-probability tensors must have shape (B,).")
+    if not policy_chosen_logps.is_floating_point() or any(t.dtype != policy_chosen_logps.dtype for t in tensors):
+        raise ValueError("All sequence log-probabilities must have the same floating-point dtype.")
+    if any(t.device != policy_chosen_logps.device for t in tensors):
+        raise ValueError("All sequence log-probabilities must share a device.")
+    if any(not torch.isfinite(t).all().item() for t in tensors):
+        raise ValueError("All sequence log-probabilities must be finite.")
+
+    # (B,): current and fixed-reference chosen-minus-rejected logP margins.
+    policy_margin = policy_chosen_logps - policy_rejected_logps
+    reference_margin = reference_chosen_logps.detach() - reference_rejected_logps.detach()
+    # (B,): stable negative log-likelihood of chosen preferences.
+    losses = -F.logsigmoid(beta * (policy_margin - reference_margin))
+    if reduction == "none":
+        return losses
+    if reduction == "sum":
+        return losses.sum()
+    return losses.mean()
+
+
 __all__ = [
     "bradley_terry_loss",
+    "dpo_loss",
     "completion_sequence_log_probs",
     "per_example_sft_nll",
 ]

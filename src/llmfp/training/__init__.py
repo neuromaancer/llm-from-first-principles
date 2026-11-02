@@ -8,6 +8,7 @@ from .evaluation import estimate_language_model_loss
 from .losses import (
     bradley_terry_loss,
     completion_sequence_log_probs,
+    dpo_loss,
     per_example_sft_nll,
 )
 from .schedules import (
@@ -24,6 +25,7 @@ __all__ = [
     "TrainingStepResult",
     "bradley_terry_loss",
     "completion_sequence_log_probs",
+    "dpo_loss",
     "cosine_decay",
     "estimate_language_model_loss",
     "language_model_training_step",
