@@ -1,6 +1,6 @@
 # PyTorch Function Reference
 
-A learning reference for **LLM from First Principles** — **99 tracked API entries**, reviewed through completed Lesson 24.
+A learning reference for **LLM from First Principles** — **101 tracked API entries**, reviewed through completed Lesson 26.
 
 Open a function to see its **signature → parameters → example → output**. The examples show common calls; the parameter tables cover the optional arguments separately.
 
@@ -16,6 +16,7 @@ Open a function to see its **signature → parameters → example → output**. 
 | [Lesson 22: supervision & checkpoints](#lesson-22--supervision-and-checkpoint-apis) | 8 |
 | [Lesson 23: preference & reward heads](#lesson-23--preference-and-reward-head-apis) | 6 |
 | [Lesson 24: KL-regularized RLHF](#lesson-24--kl-regularized-rlhf-apis) | 4 |
+| [Lesson 26: group-relative RL](#lesson-26--group-relative-rl-apis) | 2 |
 
 ## Shared setup
 
@@ -33,7 +34,7 @@ torch.set_printoptions(precision=4, sci_mode=False, linewidth=80)
 
 **Notation:** `x` is an existing tensor; `optimizer` is an optimizer instance. `*` introduces keyword-only arguments; `*size` accepts multiple dimensions. Arguments with no default are required. A trailing `_` usually denotes an in-place operation.
 
-**Output check:** The original 81 examples, eight Lesson 22 additions, six Lesson 23 additions, and four Lesson 24 additions were executed during their respective reviews on CPU with **PyTorch 2.10.0 / Python 3.13.5**. The repository requests `torch>=2.14.0`; these outputs are not a test of that environment. Seeded random values and numerical formatting can differ across versions/devices. Internal, deprecated, and overload-specific options are labeled rather than forced into the examples.
+**Output check:** The original 81 examples, eight Lesson 22 additions, six Lesson 23 additions, four Lesson 24 additions, and two Lesson 26 additions were executed during their respective reviews on CPU with **PyTorch 2.10.0 / Python 3.13.5**. The repository requests `torch>=2.14.0`; these outputs are not a test of that environment. Seeded random values and numerical formatting can differ across versions/devices. Internal, deprecated, and overload-specific options are labeled rather than forced into the examples.
 
 ## Tensor creation and shape operations
 
@@ -3975,6 +3976,89 @@ A backward cumulative return can be calculated by flipping rewards, applying cum
 </details>
 
 
+## Lesson 26 — Group-relative RL APIs
+
+Two newly used PyTorch operations in Lesson 26. The examples and outputs below were checked on CPU with Python 3.13.5 / PyTorch 2.10.0; the user's checkpoint/GPU environment was not re-run.
+
+<details>
+<summary><code>Tensor.eq</code> — Compare tensor elements for equality.</summary>
+
+**Signature**
+
+```python
+x.eq(other)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `other` | Required | Scalar or broadcast-compatible tensor to compare against. |
+
+**Example**
+
+```python
+# (G=3, T=2): sampled autoregressive binary responses
+actions = torch.tensor([[1, 1], [1, 0], [0, 1]])
+print(actions.eq(1))
+```
+
+**Output**
+
+```text
+tensor([[ True,  True],
+        [ True, False],
+        [False,  True]])
+```
+
+In Lesson 26, `actions.eq(1).all(dim=1)` marks exactly correct responses in a verifiable binary-reward environment.
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.Tensor.eq.html)
+
+</details>
+
+<details>
+<summary><code>torch.unique</code> — Retrieve distinct values or rows.</summary>
+
+**Signature**
+
+```python
+torch.unique(input, sorted=True, return_inverse=False,
+             return_counts=False, dim=None)
+```
+
+**Parameters**
+
+| Parameter | Default | Meaning |
+|:--|:--|:--|
+| `input` | Required | Tensor from which distinct elements or rows are selected. |
+| `sorted` | `True` | Sort distinct results; implementation may sort even if false. |
+| `return_inverse` | `False` | Also return a map from input elements/rows to unique indices. |
+| `return_counts` | `False` | Also return occurrence counts. |
+| `dim` | `None` | When set, compare slices along that axis, e.g. `dim=0` for unique response rows. |
+
+**Example**
+
+```python
+# (G=4, T=2): sampled responses, including a duplicate
+actions = torch.tensor([[1, 1], [0, 1], [1, 1], [0, 0]])
+print(torch.unique(actions, dim=0))
+```
+
+**Output**
+
+```text
+tensor([[0, 0],
+        [0, 1],
+        [1, 1]])
+```
+
+Lesson 26 uses distinct response rows to measure *response diversity* separately from *reward diversity*. These are not interchangeable.
+
+[PyTorch documentation](https://docs.pytorch.org/docs/stable/generated/torch.unique.html)
+
+</details>
+
 ## Learning history
 
 <details>
@@ -4069,6 +4153,13 @@ The RL primitives extracted after Lesson 21A live in `src/llmfp/rl/`; their regr
 - Indexed four newly used APIs: `torch.Generator` for seeded rollout sampling, `Tensor.std` for valid-action advantage normalization, `Tensor.clamp_min` for numerical denominator bounds, and `torch.flip` for independent Monte Carlo return checks.
 - Extracted two reusable RLHF operations into `llmfp.rl.kl`: conditional categorical forward KL at supplied states and frozen rollout KL-shaped rewards with terminal/truncation boundaries. The new 12 focused regression tests passed on CPU Python 3.13.5 / PyTorch 2.10.0 in isolated module checks. No full checkpoint-backed notebook rerun or upstream full-suite run was performed.
 - The toy reward model and four-cycle PPO loop stay in the notebook; they are not a reusable trainer or evidence of improved instruction following. See [Lesson 24 extraction audit](docs/lesson_24_extraction_audit.md).
+
+### Lesson 26 — Modern LLM RL and Preference Optimization (complete)
+
+- Compared centered and standardized GRPO advantages with RLOO, then checked original GRPO per-response length weighting, Dr. GRPO fixed-budget normalization, direct reference KL, zero-variance groups and DAPO-style Clip-Higher.
+- Newly indexed `Tensor.eq` and `torch.unique`; `Tensor.std`, `torch.flip`, `torch.multinomial`, `torch.clamp`, `F.log_softmax`, and earlier PPO/KL primitives were already indexed.
+- Extracted group-relative advantages and the per-response GRPO clipped **policy** surrogate, with optional asymmetric upper clipping, in `llmfp.rl.group_relative`. Six focused CPU regression tests passed in isolation; no claim is made of a complete CUDA/notebook or repository test-suite run.
+- The two-token toy policy, group sampling, reward definition, fixed-budget Dr. GRPO example and repeated experiment remain in the notebook. See [Lesson 26 extraction audit](docs/lesson_26_extraction_audit.md).
 
 </details>
 

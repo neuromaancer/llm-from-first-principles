@@ -1,8 +1,9 @@
 """Reusable reinforcement-learning utilities."""
 
 from .advantages import generalized_advantage_estimation, td_error
-from .kl import categorical_kl_from_logits, kl_shaped_action_rewards
 from .alignment import align_state_values_for_actions, rescore_actions_from_logits
+from .group_relative import group_relative_advantages, grpo_clipped_policy_loss
+from .kl import categorical_kl_from_logits, kl_shaped_action_rewards
 from .policy_gradient import Reduction, reinforce_loss
 from .ppo import categorical_entropy, masked_mean, ppo_policy_loss, ppo_value_loss
 from .returns import discounted_returns
@@ -17,6 +18,8 @@ __all__ = [
     "categorical_entropy",
     "discounted_returns",
     "generalized_advantage_estimation",
+    "group_relative_advantages",
+    "grpo_clipped_policy_loss",
     "masked_mean",
     "ppo_policy_loss",
     "ppo_value_loss",
