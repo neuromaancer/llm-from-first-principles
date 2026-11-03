@@ -18,7 +18,7 @@ The notebook-learning workflow follows a deliberate rule:
 
 This describes how the lessons are worked through, not a claim that repository maintenance, reusable-code extraction, or integration examples have never received AI assistance.
 
-**📖 The story behind this project:** [Why I Built LLM from First Principles](https://neuromaancer.github.io/blog/why-i-built-llm-from-first-principles/) — why relying on coding agents made me want to write LLM and RL learning implementations myself again, question the choices behind working code, and distinguish lower training loss from better behavior. Also available in [中文](https://neuromaancer.github.io/zh/blog/why-i-built-llm-from-first-principles/) and [Français](https://neuromaancer.github.io/fr/blog/why-i-built-llm-from-first-principles/).
+**📖 The story behind this project:** [Why I Built LLM from First Principles](https://neuromaancer.github.io/blog/why-i-built-llm-from-first-principles/) — why relying on coding agents made me want to write LLM and RL learning implementations myself again, question the choices behind working code, and distinguish lower training loss from better behavior. 
 
 **[Explore the lessons](#-learning-path)** · **[Run the demo](#-run-a-small-complete-example)** · **[Use the source package](src/README.md)** · **[PyTorch reference](TORCH_FUNCTIONS.md)** · **[Learning philosophy](#-learning-philosophy)** · **[Data](data/README.md)**
 
