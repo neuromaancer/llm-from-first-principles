@@ -1,4 +1,4 @@
-# LLM from First Principles
+# 🧠 LLM from First Principles
 
 **Understand every tensor, operation, and gradient—from a tiny GPT to policy optimization.**
 
@@ -18,7 +18,7 @@ The notebook-learning workflow follows a deliberate rule:
 
 This describes how the lessons are worked through, not a claim that repository maintenance, reusable-code extraction, or integration examples have never received AI assistance.
 
-**[Explore the lessons](#-learning-path)** · **[Run the demo](#-run-a-small-complete-example)** · **[Use the source package](src/README.md)** · **[PyTorch reference](TORCH_FUNCTIONS.md)** · **[Learning philosophy](#learning-philosophy)** · **[Data](data/README.md)**
+**[Explore the lessons](#-learning-path)** · **[Run the demo](#-run-a-small-complete-example)** · **[Use the source package](src/README.md)** · **[PyTorch reference](TORCH_FUNCTIONS.md)** · **[Learning philosophy](#-learning-philosophy)** · **[Data](data/README.md)**
 
 ```mermaid
 flowchart LR
@@ -40,7 +40,7 @@ flowchart LR
 | Reuse a mechanism in your own experiment | [Source guide and tensor contracts](src/README.md). |
 | See the components run together first | [Checkpoint-free SFT/DPO example](examples/tiny_sft_dpo.py). |
 
-## What this repository is — and is not
+## 🎯 What this repository is — and is not
 
 This is primarily a **learning repository**, not a production LLM framework.
 
@@ -76,6 +76,20 @@ uv run python examples/tiny_sft_dpo.py --device cuda
 It prints before/after losses, preference-margin changes, generated responses, and whether the reference remained unchanged. The GPT starts from random weights: this demonstrates **SFT-style composition**, not fine-tuning a pretrained assistant. Fitting these examples is not evidence of generalization.
 
 See [the source walkthrough](src/README.md#end-to-end-example) for the actual modules, tensor shapes, and limitations. Python and dependency requirements are declared in [`pyproject.toml`](pyproject.toml); the repository environment is recorded in `uv.lock`.
+
+## 🧩 What lives where?
+
+```text
+lessons/             Derivations, handwritten experiments, and saved observations
+src/llmfp/           Reusable model, data, generation, training, and RL primitives
+src/README.md        API map, tensor contracts, and the integration walkthrough
+examples/            Small runnable compositions of the source package
+data/                Published teaching data, provenance, and corpus preparation
+tests/               Focused numerical, gradient, and integration checks
+TORCH_FUNCTIONS.md   Searchable PyTorch signatures, examples, and outputs
+```
+
+The source GPT uses rotary positions, RMSNorm, SwiGLU, and configurable query/KV heads. Linear attention and MoE are separate educational building blocks, not switches that silently replace the default GPT architecture. See [the module map](src/README.md#module-map).
 
 ## 📚 Learning path
 
@@ -145,7 +159,7 @@ Read in order for the complete derivation, or use the topic links below. There a
 
 </details>
 
-## Learning philosophy
+## 💡 Learning philosophy
 
 ### Build from simple operations upward
 
@@ -175,21 +189,7 @@ Prefer a small experiment that answers the question being studied: a gradient co
 
 AI can explain an equation, challenge an intuition, discuss a design, review code, or suggest a useful experiment. During the learning exercises, code completion is disabled and the implementation is typed and reasoned through manually. The learner must be able to explain the code before relying on it.
 
-## 🧩 What lives where?
-
-```text
-lessons/             Derivations, handwritten experiments, and saved observations
-src/llmfp/           Reusable model, data, generation, training, and RL primitives
-src/README.md        API map, tensor contracts, and the integration walkthrough
-examples/            Small runnable compositions of the source package
-data/                Published teaching data, provenance, and corpus preparation
-tests/               Focused numerical, gradient, and integration checks
-TORCH_FUNCTIONS.md   Searchable PyTorch signatures, examples, and outputs
-```
-
-The source GPT uses rotary positions, RMSNorm, SwiGLU, and configurable query/KV heads. Linear attention and MoE are separate educational building blocks, not switches that silently replace the default GPT architecture. See [the module map](src/README.md#module-map).
-
-## VS Code learning environment
+## 🛠️ VS Code learning environment
 
 The shared workspace configuration is in [`.vscode/settings.json`](.vscode/settings.json), with extension recommendations in [`.vscode/extensions.json`](.vscode/extensions.json).
 
@@ -199,7 +199,7 @@ The recommended extensions cover Python, Pylance, debugging, Ruff, Jupyter, and 
 
 After `uv sync`, open the repository folder in VS Code, accept the relevant extension recommendations, and select the project `.venv` Python interpreter/kernel for the notebooks. Run the notebooks with `lessons/` as the working directory where their relative paths require it.
 
-## Working with the notebooks
+## 📓 Working with the notebooks
 
 Most toy mathematics runs on CPU; checkpoint-backed GPT experiments may use CUDA.
 
@@ -219,7 +219,7 @@ python data/prepare_tinyshakespeare.py
 
 The data guide records the exact source, checksum, and discrepancy. `.gitignore` permits the single `data/raw/tinyshakespeare.txt` file to be versioned after checking the intended corpus, while other raw/processed data and checkpoints remain ignored. The existing notebooks and their inline teaching datasets are unchanged.
 
-## Checks and contributions
+## ✅ Checks and contributions
 
 ```bash
 uv run python -m unittest discover -s tests -v
