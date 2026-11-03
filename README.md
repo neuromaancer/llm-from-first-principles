@@ -1,555 +1,155 @@
 # LLM from First Principles
 
-Building a small language model from scratch to understand every tensor, operation, and gradient.
+**Understand every tensor, operation, and gradient—from a tiny GPT to policy optimization.**
 
-This repository is my public learning log for understanding modern language models from the bottom up.
+![Python 3.13](https://img.shields.io/badge/Python-3.13-3776AB?logo=python&logoColor=white)
+![PyTorch](https://img.shields.io/badge/Built_with-PyTorch-EE4C2C?logo=pytorch&logoColor=white)
+![28 notebooks](https://img.shields.io/badge/Learning_path-28_notebooks-2D6A4F)
 
-The goal is **not** to reproduce a large model, hide complexity behind high-level frameworks, or reach a benchmark as quickly as possible.
+A hands-on learning path with explicit derivations, small experiments, and a reusable PyTorch package. Build the mechanisms yourself, inspect their behavior, then compose them into a working language-model pipeline.
 
-The goal is to reach the point where I can look at a Transformer and explain:
+**[Explore the lessons](#-learning-path)** · **[Run the demo](#-run-a-small-complete-example)** · **[Use the source package](src/README.md)** · **[PyTorch reference](TORCH_FUNCTIONS.md)**
 
-- what every tensor represents,
-- why it has that shape,
-- what every operation does,
-- how gradients flow through it,
-- and what changes when the architecture is modified.
-
-The project therefore starts below the Transformer itself: tensor operations, numerical stability, autodiff, tokenization, batching, losses, optimizers, and training loops — before building attention and a complete decoder-only language model. From there, it continues into inference, reinforcement-learning foundations, supervised fine-tuning, preference learning, RLHF, and modern LLM post-training.
-
-> **Learning rule:** every implementation in this repository is typed and worked through manually.
->
-> AI code completion is disabled. AI may be used as a tutor for explanations, derivations, questions, discussion, and code review, but not as an autocomplete or bulk code-generation workflow.
->
-> **If I cannot explain a line of code, it does not belong here yet.**
-
----
-
-## What this repository is — and is not
-
-This is primarily a **learning repository**, not a production LLM framework.
-
-Educational implementations intentionally favor clarity over efficiency. Intermediate tensors may stay visible, algorithms may first be implemented explicitly, and related mechanisms may initially be written separately when that makes their differences easier to understand.
-
-Once a mechanism has been implemented, derived, and verified, later lessons are free to use mature PyTorch primitives instead of repeatedly rebuilding the same idea.
-
-The point is not to reinvent PyTorch forever. The point is to understand what PyTorch is doing before relying on it.
-
----
-
-## Lessons
-
-The notebooks are intended to be read in order. The roadmap is organized into five stages: first understand the language model itself, then pretrain a tiny GPT end to end, then study sparse conditional computation with Mixture of Experts, then build the reinforcement-learning foundations needed for post-training, and finally study modern LLM post-training objectives.
-
-### Part I — Language Models from First Principles
-
-| Lesson | Topic | Status |
-|---|---|---|
-| [00](lessons/00_tensor_basics.ipynb) | Tensor Basics | ✅ Complete |
-| [01](lessons/01_autograd_from_scratch.ipynb) | Autograd from Scratch | ✅ Complete |
-| [02](lessons/02_text_and_tokenization.ipynb) | Text and Tokenization | ✅ Complete |
-| [03](lessons/03_sequences_and_batching.ipynb) | Sequences and Batching | ✅ Complete |
-| [04](lessons/04_embeddings_and_linear_layers.ipynb) | Embeddings and Linear Layers | ✅ Complete |
-| [05](lessons/05_language_modeling_objectives.ipynb) | Language Modeling Objectives | ✅ Complete |
-| [06](lessons/06_optimizers_from_scratch.ipynb) | Optimizers from Scratch | ✅ Complete |
-| [07](lessons/07_training_loop_from_scratch.ipynb) | Training Loop from Scratch | ✅ Complete |
-| [08](lessons/08_causal_self_attention.ipynb) | Causal Self-Attention | ✅ Complete |
-| [09](lessons/09_multi_head_attention.ipynb) | Multi-Head Attention | ✅ Complete |
-| [10](lessons/10_normalization_and_feed_forward.ipynb) | Normalization and Feed-Forward Networks | ✅ Complete |
-| [11](lessons/11_positional_information.ipynb) | Positional Information | ✅ Complete |
-| [12](lessons/12_transformer_blocks_and_gpt.ipynb) | Transformer Blocks and GPT | ✅ Complete |
-| [13](lessons/13_generation_and_kv_cache.ipynb) | Generation and KV Cache | ✅ Complete |
-| [14](lessons/14_multi_query_and_grouped_query_attention.ipynb) | Multi-Query and Grouped-Query Attention | ✅ Complete |
-| [15](lessons/15_linear_attention.ipynb) | Linear Attention | ✅ Complete |
-
-### Part II — Pretraining a Tiny GPT
-
-| Lesson | Topic | Status |
-|---|---|---|
-| [16](lessons/16_pretraining_a_tiny_gpt.ipynb) | Pretraining a Tiny GPT End to End | ✅ Complete |
-
-This lesson is the integration point for Part I. It connects raw text, tokenization, batching, the decoder-only model, cross-entropy, AdamW, learning-rate scheduling, validation, checkpoints, perplexity, and generation in one real training run.
-
-### Part III — Sparse Conditional Computation
-
-| Lesson | Topic | Status |
-|---|---|---|
-| [17](lessons/17_mixture_of_experts.ipynb) | Mixture of Experts (MoE) from First Principles | ✅ Complete |
-
-This lesson starts from the dense SwiGLU feed-forward network already used by the GPT baseline and asks whether every token must use the same feed-forward parameters. It introduces expert networks, learned routers, top-k routing, token dispatch/gather, expert utilization, load balancing, capacity constraints, and the distinction between total and active parameters.
-
-### Part IV — Reinforcement Learning from First Principles
-
-| Lesson | Topic | Status |
-|---|---|---|
-| [18](lessons/18_rl_foundations.ipynb) | RL Foundations: Trajectories, Return, Value, Q, Advantage, Bellman Equations | ✅ Complete |
-| [19](lessons/19_policy_gradients_and_reinforce.ipynb) | Policy Gradients and REINFORCE from Scratch | ✅ Complete |
-| [20](lessons/20_actor_critic_td_and_gae.ipynb) | Actor-Critic, TD Learning, and GAE | ✅ Complete |
-| [21A](lessons/21a_ppo_from_scratch.ipynb) | PPO from Scratch: clipping, GAE, rollout reuse, and a complete toy training loop | ✅ Complete |
-| [21B](lessons/21b_ppo_with_tiny_gpt.ipynb) | PPO with Tiny GPT: Transformer Actor/Critic, rollout collection, PPO updates, and evaluation | ✅ Complete |
-
-**Lessons 21A and 21B are complete.** Lesson 21A derives PPO and validates the basic toy rollout; its reusable PPO losses, GAE, token alignment, and frozen rollout contracts live in `llmfp.rl` and are covered by `tests/test_ppo_primitives.py`. Lesson 21B integrates those contracts with a GPT Actor and an independent Transformer Critic, tests autoregressive sampling versus teacher-forced rescoring, and completes PPO training and exact policy evaluation. Toy environments, comparison runners, and the teaching-only Critic stay in the notebook instead of being prematurely extracted into the reusable library.
-
-The RL section is intentionally focused. It does not try to reproduce a complete general-purpose RL curriculum; it develops the concepts needed to understand LLM post-training objectives from first principles.
-
-The implementation goal is a **minimal RL-for-LLM stack**, not a generic RL framework. Each lesson should add one verified piece to a small end-to-end system rather than leaving the mathematics isolated in notebooks.
-
-The design is organized around five responsibilities:
-
-```text
-Models
-├── Actor / token policy
-└── Critic / value model
-
-Collection
-└── sample token trajectories under the current policy
-
-Data
-└── store rollout facts and learning targets with explicit token alignment
-
-RL math
-├── returns
-├── TD errors
-├── advantages / GAE
-└── policy / value / PPO objectives
-
-Experiment loop
-└── collect → construct targets → update → evaluate → checkpoint
+```mermaid
+flowchart LR
+    A["Tensors & autodiff"] --> B["Attention & tiny GPT"]
+    B --> C["Pretraining & generation"]
+    C --> D["SFT & preferences"]
+    D --> E["PPO / RLHF"]
+    D --> F["DPO"]
+    E --> G["Group-relative RL"]
 ```
 
-The first version deliberately keeps these responsibilities explicit. Trainable predictors use `nn.Module`; trajectory data uses typed tensor containers; core RL mathematics stays in small tensor functions; and the experiment loop remains thin and readable.
+## 🧭 Start where you need
 
-A central design rule is to distinguish three kinds of quantities:
+| Your goal | Start here |
+|---|---|
+| Learn from the ground up | [Tensor basics](lessons/00_tensor_basics.ipynb), then follow the numbered notebooks. |
+| Understand how a GPT fits together | [Transformer blocks and GPT](lessons/12_transformer_blocks_and_gpt.ipynb) → [pretraining](lessons/16_pretraining_a_tiny_gpt.ipynb). |
+| Understand LLM post-training | [RL foundations](lessons/18_rl_foundations.ipynb) → [SFT](lessons/22_supervised_fine_tuning.ipynb) → [preferences](lessons/23_preference_data_and_reward_modeling.ipynb). |
+| Reuse a mechanism in your own experiment | [Source guide and tensor contracts](src/README.md). |
+| See the components run together first | [Checkpoint-free SFT/DPO example](examples/tiny_sft_dpo.py). |
 
-```text
-facts recorded at collection time
-        ≠
-fixed learning targets for an update
-        ≠
-current differentiable model predictions
-```
+This is an **educational implementation**, not a production training framework or a benchmark claim. Basic Python and familiarity with vectors, derivatives, and probability are helpful; the early notebooks develop the PyTorch foundations.
 
-For example, PPO will distinguish rollout-time log-probabilities from current log-probabilities, while advantages and value targets are treated as fixed credit signals during an update.
+## 🚀 Run a small, complete example
 
-The LLM version stores each prompt-plus-completion sequence once rather than materializing a separate full prefix for every state. Per-action quantities such as rewards, log-probabilities, values, advantages, and masks are aligned to generated token positions.
-
-The framework will grow only after mechanisms are derived and verified in the lessons. Empty abstractions are intentionally avoided.
-
-### Part V — LLM Post-Training
-
-| Lesson | Topic | Status |
-|---|---|---|
-| [22](lessons/22_supervised_fine_tuning.ipynb) | Supervised Fine-Tuning (SFT) | ✅ Complete |
-| [23](lessons/23_preference_data_and_reward_modeling.ipynb) | Preference Data, Sequence Log-Probabilities, and Reward Modeling | ✅ Complete |
-| [24](lessons/24_rlhf_with_ppo_and_kl.ipynb) | RLHF with PPO and KL Regularization | ✅ Complete |
-| [25](lessons/25_direct_preference_optimization.ipynb) | Direct Preference Optimization (DPO) | ✅ Complete |
-| [26](lessons/26_modern_llm_rl_and_preference_optimization.ipynb) | Modern LLM RL and Preference Optimization | ✅ Complete |
-
-The post-training section will connect token-level language modeling to sequence-level optimization. It will make explicit the roles of completion log-probabilities, reference policies, KL penalties, pairwise preferences, learned rewards, and policy optimization before using higher-level training frameworks.
-
-**Lesson 22 is complete.** It connects assistant-target alignment, masking and right-padded batches to full-parameter fine-tuning of the Lesson 16 pretrained GPT, followed by teacher-forced diagnostics, greedy generation, and a Plotly evaluation heatmap. Three verified token/tensor primitives now live in `llmfp.data.supervision` and `llmfp.training.losses`; text templates, toy data, experiment loops, and plotting remain in the notebook. See the [Lesson 22 extraction audit](docs/lesson_22_extraction_audit.md) for the precise contracts, tests, and exclusions.
-
----
-
-**Lesson 23 is complete.** It links teacher-forced completion log-probabilities to pairwise Bradley–Terry preference learning and a frozen-backbone GPT reward-head experiment. Two reusable math primitives have been extracted to `llmfp.training`: completion sequence log-probability and Bradley–Terry loss. The notebook retains the synthetic pairs, reward-head prototype, train/evaluation runners, and Plotly figures. See the [Lesson 23 extraction audit](docs/lesson_23_extraction_audit.md).
-
----
-
-## Learning philosophy
-
-This repository follows a few rules.
-
-### 1. Build from simple operations upward
-
-Understand `reshape`, `transpose`, broadcasting, matrix multiplication, reductions, and softmax before using them inside attention.
-
-### 2. Predict tensor shapes before running the code
-
-Shapes should become something that can be reasoned about, not something discovered through trial and error.
-
-### 3. Implement new mechanisms explicitly
-
-When a mechanism is the object of study, implement it in a transparent way first.
-
-Examples include:
-
-- numerically stable softmax,
-- scalar reverse-mode autodiff,
-- BPE,
-- cross-entropy from logits,
-- SGD, Momentum, Adam, and AdamW,
-- causal masking,
-- attention,
-- normalization,
-- residual connections,
-- and gated feed-forward networks.
-
-### 4. Reuse a mechanism once it is understood
-
-A later notebook does not need to reimplement a mechanism that has already been derived and verified.
-
-For example, once cross-entropy has been implemented manually, later training code can use `torch.nn.functional.cross_entropy`.
-
-The purpose is understanding, not ritual duplication.
-
-### 5. Prefer explicit tensor semantics
-
-The central question is always:
-
-> What happens to the tensor?
-
-For attention, that means reasoning through transformations such as:
-
-```text
-(B, T, C)
-    ↓
-Q, K, V
-    ↓
-(B, H, T, D)
-    ↓
-QKᵀ
-    ↓
-(B, H, T, T)
-    ↓
-softmax
-    ↓
-weighted sum of V
-    ↓
-(B, T, C)
-```
-
-### 6. Refactor only after understanding the duplication
-
-MHA, MQA, and GQA may initially be implemented separately before extracting their common structure.
-
-Abstraction should follow understanding, not hide what has not yet been understood.
-
-### 7. Keep lessons separate from reusable implementations
-
-`lessons/` contains verbose educational notebooks with derivations, intermediate tensors, sanity checks, and reference comparisons.
-
-The `src/llmfp/` package contains cleaner reusable implementations extracted only after the underlying mechanisms have been derived and verified in the lessons.
-
-The extraction rule is:
-
-```text
-understand
-    ↓
-implement explicitly
-    ↓
-verify
-    ↓
-extract into src/
-    ↓
-reuse in later lessons
-```
-
-This keeps later notebooks focused on the new idea rather than repeatedly copying already-understood mechanisms.
-
-Extraction is selective: move a verified, template-independent operation with an explicit tensor contract and a concrete reuse role, not the whole teaching experiment. Conversely, avoiding a generic framework is not a reason to leave every reusable primitive in a notebook. Keep the original derivation and experiments available as the reference implementation; test the extracted code against them.
-
-### 8. Use AI as a teacher, not as an autocomplete engine
-
-The coding environment used for this project disables AI code completion.
-
-AI can help challenge an explanation, discuss a derivation, review an implementation, or suggest questions to investigate. The actual learning code is typed and reasoned through manually.
-
-
----
-
-## What is being built
-
-The long-term target is broader than a small GPT implementation. The repository aims to trace the path from tensors to a pretrained language model and then to a modern post-trained assistant while keeping every major abstraction explainable.
-
-The path is deliberately incremental:
-
-```text
-Part I — Language model foundations
-├── tensors and scalar autodiff
-├── tokenization and batching
-├── objectives and optimizers
-├── causal self-attention
-├── multi-head attention
-├── normalization and SwiGLU
-├── positional information and RoPE
-├── decoder-only GPT
-├── generation and sampling
-├── KV caching
-├── MQA / GQA
-└── linear attention
-
-Part II — End-to-end pretraining
-├── raw text → training tokens
-├── train / validation split
-├── sequence windows and batches
-├── GPT forward pass
-├── cross-entropy and backpropagation
-├── AdamW and learning-rate scheduling
-├── gradient clipping
-├── checkpoints
-├── validation loss and perplexity
-└── generation from the trained model
-
-Part III — Sparse conditional computation
-├── dense FFN → multiple experts
-├── router logits and routing probabilities
-├── top-k expert selection
-├── token dispatch and gather
-├── expert utilization
-├── load balancing
-├── capacity constraints
-└── total vs active parameters
-
-Part IV — Reinforcement-learning foundations
-├── states, actions, trajectories, and rewards
-├── returns and discounting
-├── V(s), Q(s,a), and advantage
-├── Bellman equations
-├── Monte Carlo estimation
-├── policy gradients / REINFORCE
-├── baselines and variance reduction
-├── actor-critic methods
-├── temporal-difference learning
-├── generalized advantage estimation
-├── PPO
-└── minimal RL-for-LLM integration
-    ├── token-policy rollout
-    ├── rollout-time log-probabilities
-    ├── critic values
-    ├── action masks and trajectory boundaries
-    ├── advantages and value targets
-    └── policy / value updates
-
-Part V — LLM post-training
-├── supervised fine-tuning
-├── chat formatting and assistant-only loss
-├── token-level and sequence-level log-probabilities
-├── preference datasets
-├── pairwise reward modeling
-├── reference policies and KL regularization
-├── RLHF with PPO
-├── direct preference optimization
-└── modern LLM RL / preference optimization
-
-Experiments
-├── parameter count
-├── training and validation loss
-├── perplexity
-├── tokens / second
-├── GPU memory
-├── inference latency
-├── KV-cache memory
-├── reward / preference accuracy
-├── policy KL
-└── pretraining and post-training behavior comparisons
-```
-
-The intention is not to implement every architecture or every reinforcement-learning algorithm. The main path focuses on the concepts required to understand how a decoder-only language model is built, pretrained, and post-trained from first principles.
-
----
-
-## How to use this repository
-
-The notebooks are not a collection of final answers. They are a record of successive stages of understanding.
-
-A useful way to follow the project is:
-
-1. read the explanation before the code,
-2. predict tensor shapes before running a cell,
-3. derive the operation on paper,
-4. implement it yourself,
-5. test edge cases,
-6. compare it against a trusted PyTorch implementation when appropriate,
-7. only then move to the next abstraction.
-
-If you are following along, typing the code yourself is strongly recommended.
-
----
-
-## Development environment
-
-Primary development environment:
-
-- WSL2 / Linux
-- Python 3.13
-- [uv](https://docs.astral.sh/uv/) for environment and dependency management
-- PyTorch
-- Jupyter
-- VS Code
-
-Install the project environment with:
+With [uv](https://docs.astral.sh/uv/) installed:
 
 ```bash
+git clone https://github.com/neuromaancer/llm-from-first-principles.git
+cd llm-from-first-principles
 uv sync
+uv run python examples/tiny_sft_dpo.py
 ```
 
-The lessons are Jupyter notebooks and can be opened directly in VS Code or through Jupyter.
+The example connects **character tokenization → a tiny GPT → completion-only supervised fitting → a frozen reference → DPO → greedy generation**. It runs on CPU by default, uses three built-in synthetic examples, and needs **no dataset download, API key, or existing checkpoint**.
 
-Run the reusable PPO and supervised-learning regression checks with:
+```bash
+# A smaller smoke run; do not expect useful generations after four updates.
+uv run python examples/tiny_sft_dpo.py --sft-steps 4 --dpo-steps 2
+
+# Optional, with a working CUDA-enabled PyTorch installation.
+uv run python examples/tiny_sft_dpo.py --device cuda
+```
+
+It prints before/after losses, preference-margin changes, generated responses, and whether the reference remained unchanged. The GPT starts from random weights: this demonstrates **SFT-style composition**, not fine-tuning a pretrained assistant. Fitting these examples is not evidence of generalization.
+
+See [the source walkthrough](src/README.md#end-to-end-example) for the actual modules, tensor shapes, and limitations. Python and dependency requirements are declared in [`pyproject.toml`](pyproject.toml); the repository environment is recorded in `uv.lock`.
+
+## 📚 Learning path
+
+Read in order for the complete derivation, or use the topic links below. There are 28 notebooks: lessons 00–26, with PPO split into 21A and 21B.
+
+<details>
+<summary><strong>01 · Language-model foundations — lessons 00–15</strong></summary>
+
+| Notebook | What you will build or understand |
+|---|---|
+| [00 · Tensors](lessons/00_tensor_basics.ipynb) | Shapes, broadcasting, indexing, and reductions. |
+| [01 · Autograd](lessons/01_autograd_from_scratch.ipynb) | Reverse-mode differentiation and gradient flow. |
+| [02 · Tokenization](lessons/02_text_and_tokenization.ipynb) | Text representations, character tokens, and BPE concepts. |
+| [03 · Batching](lessons/03_sequences_and_batching.ipynb) | Sequences, context windows, and next-token targets. |
+| [04 · Embeddings](lessons/04_embeddings_and_linear_layers.ipynb) | Discrete IDs, learned representations, and linear layers. |
+| [05 · Objectives](lessons/05_language_modeling_objectives.ipynb) | Softmax, likelihood, and cross-entropy. |
+| [06 · Optimizers](lessons/06_optimizers_from_scratch.ipynb) | SGD, momentum, Adam, and AdamW. |
+| [07 · Training loop](lessons/07_training_loop_from_scratch.ipynb) | Forward, backward, updates, and evaluation. |
+| [08 · Causal attention](lessons/08_causal_self_attention.ipynb) | Queries, keys, values, and causal masking. |
+| [09 · Multi-head attention](lessons/09_multi_head_attention.ipynb) | Head splitting and parallel attention patterns. |
+| [10 · Normalization and FFNs](lessons/10_normalization_and_feed_forward.ipynb) | Normalization and gated feed-forward networks. |
+| [11 · Positions](lessons/11_positional_information.ipynb) | Positional information and rotary embeddings. |
+| [12 · GPT](lessons/12_transformer_blocks_and_gpt.ipynb) | Residual blocks and a decoder-only language model. |
+| [13 · Generation](lessons/13_generation_and_kv_cache.ipynb) | Autoregressive decoding, sampling, and KV caching. |
+| [14 · MQA and GQA](lessons/14_multi_query_and_grouped_query_attention.ipynb) | Query/KV head sharing and cache size. |
+| [15 · Linear attention](lessons/15_linear_attention.ipynb) | Alternative attention and recurrent memory views. |
+
+</details>
+
+<details>
+<summary><strong>02 · End-to-end pretraining — lesson 16</strong></summary>
+
+[16 · Pretraining a tiny GPT](lessons/16_pretraining_a_tiny_gpt.ipynb) connects raw text, train/validation splits, token batches, GPT, AdamW, scheduling, checkpoints, perplexity, and generation.
+
+</details>
+
+<details>
+<summary><strong>03 · Sparse computation — lesson 17</strong></summary>
+
+[17 · Mixture of Experts](lessons/17_mixture_of_experts.ipynb) explores expert networks, top-k routing, dispatch/gather, utilization, balancing, capacity, and active versus total parameters.
+
+</details>
+
+<details>
+<summary><strong>04 · Reinforcement-learning foundations — lessons 18–21B</strong></summary>
+
+| Notebook | Focus |
+|---|---|
+| [18 · RL foundations](lessons/18_rl_foundations.ipynb) | Trajectories, returns, values, and Bellman equations. |
+| [19 · Policy gradients](lessons/19_policy_gradients_and_reinforce.ipynb) | REINFORCE, baselines, and sampling estimators. |
+| [20 · Actor–critic](lessons/20_actor_critic_td_and_gae.ipynb) | TD errors, bootstrapping, and GAE. |
+| [21A · PPO](lessons/21a_ppo_from_scratch.ipynb) | Clipping, fixed rollouts, and policy/value updates. |
+| [21B · PPO with GPT](lessons/21b_ppo_with_tiny_gpt.ipynb) | Token alignment, GPT actors/critics, and evaluation. |
+
+</details>
+
+<details open>
+<summary><strong>05 · LLM post-training — lessons 22–26</strong></summary>
+
+| Notebook | Focus |
+|---|---|
+| [22 · SFT](lessons/22_supervised_fine_tuning.ipynb) | Assistant-only targets, padding, and supervised fine-tuning. |
+| [23 · Preference learning](lessons/23_preference_data_and_reward_modeling.ipynb) | Sequence log-probabilities, Bradley–Terry loss, and a reward head. |
+| [24 · PPO-RLHF](lessons/24_rlhf_with_ppo_and_kl.ipynb) | Reference KL, generated rollouts, GAE, and policy updates. |
+| [25 · DPO](lessons/25_direct_preference_optimization.ipynb) | Derive and optimize reference-relative preference margins. |
+| [26 · Group-relative RL](lessons/26_modern_llm_rl_and_preference_optimization.ipynb) | GRPO/RLOO, loss weighting, KL estimators, and DAPO mechanisms. |
+
+</details>
+
+## 🧩 What lives where?
+
+```text
+lessons/             Derivations, handwritten experiments, and saved observations
+src/llmfp/           Reusable model, data, generation, training, and RL primitives
+src/README.md        API map, tensor contracts, and the integration walkthrough
+examples/            Small runnable compositions of the source package
+tests/               Focused numerical, gradient, and integration checks
+TORCH_FUNCTIONS.md   Searchable PyTorch signatures, examples, and outputs
+```
+
+The source GPT uses rotary positions, RMSNorm, SwiGLU, and configurable query/KV heads. Linear attention and MoE are separate educational building blocks, not switches that silently replace the default GPT architecture. See [the module map](src/README.md#module-map).
+
+## Working with the notebooks
+
+Open `lessons/` in VS Code with Jupyter support and select the project's `.venv` kernel. Most toy mathematics runs on CPU; checkpoint-backed GPT experiments may use CUDA.
+
+**Not every notebook is standalone.** Lessons 22–25 reuse locally produced GPT checkpoints from earlier lessons. Follow the checkpoint paths in each notebook; model weights and large datasets are intentionally not committed. The small example above is the independent entry point when those artifacts are unavailable.
+
+The learning pattern is **motivation → derivation → explicit implementation → a useful check → selective reuse**. Tensor meanings and gradient paths matter more than accumulating abstraction layers. Lower training loss is not a substitute for behavioral evaluation; the notebooks retain unsuccessful as well as successful toy outcomes.
+
+## Checks and contributions
 
 ```bash
 uv run python -m unittest discover -s tests -v
 ```
 
-The PPO helpers assume generated-action positions are consecutive with right-side action padding; the three masks (`action_mask`, `bootstrap_mask`, `continuation_mask`) retain distinct meanings.
-
-The project interpreter should point to:
-
-```text
-.venv/bin/python
-```
-
-The local `.venv/` directory is not committed to Git.
-
----
-
-## VS Code learning environment
-
-This repository includes a small shared VS Code configuration under
-[`.vscode/`](.vscode/).
-
-The workspace intentionally disables AI-assisted code completion.
-
-Recommended extensions are also included, covering Python, Pylance,
-Ruff, Jupyter, debugging, and WSL.
-
-The intention is deliberate:
-
-> AI may help explain, question, and review the code, but the learning
-> implementation itself should be typed and reasoned through manually.
-
----
-
-## Repository structure
-
-The repository grows gradually rather than being generated all at once.
-
-```text
-llm-from-first-principles/
-├── lessons/
-│   ├── 00_tensor_basics.ipynb
-│   ├── 01_autograd_from_scratch.ipynb
-│   ├── 02_text_and_tokenization.ipynb
-│   ├── 03_sequences_and_batching.ipynb
-│   ├── 04_embeddings_and_linear_layers.ipynb
-│   ├── 05_language_modeling_objectives.ipynb
-│   ├── 06_optimizers_from_scratch.ipynb
-│   ├── 07_training_loop_from_scratch.ipynb
-│   ├── 08_causal_self_attention.ipynb
-│   ├── 09_multi_head_attention.ipynb
-│   ├── 10_normalization_and_feed_forward.ipynb
-│   ├── 11_positional_information.ipynb
-│   ├── 12_transformer_blocks_and_gpt.ipynb
-│   ├── 13_generation_and_kv_cache.ipynb
-│   ├── 14_multi_query_and_grouped_query_attention.ipynb
-│   ├── 15_linear_attention.ipynb
-│   ├── 16_pretraining_a_tiny_gpt.ipynb
-│   ├── 17_mixture_of_experts.ipynb
-│   ├── 18_rl_foundations.ipynb
-│   ├── 19_policy_gradients_and_reinforce.ipynb
-│   ├── 20_actor_critic_td_and_gae.ipynb
-│   ├── 21a_ppo_from_scratch.ipynb
-│   ├── 21b_ppo_with_tiny_gpt.ipynb
-│   ├── 22_supervised_fine_tuning.ipynb
-│   ├── 23_preference_data_and_reward_modeling.ipynb
-│   ├── 24_rlhf_with_ppo_and_kl.ipynb
-│   ├── 25_direct_preference_optimization.ipynb
-│   └── 26_modern_llm_rl_and_preference_optimization.ipynb
-│
-├── src/
-│   └── llmfp/
-│       ├── nn/
-│       │   ├── attention.py
-│       │   ├── fast_weights.py
-│       │   ├── linear_attention.py
-│       │   ├── mlp.py
-│       │   ├── moe.py
-│       │   ├── rope.py
-│       │   └── transformer.py
-│       ├── data/
-│       │   ├── batching.py
-│       │   ├── supervision.py
-│       │   └── tokenization.py
-│       ├── models/
-│       │   └── gpt.py
-│       ├── rl/
-│       │   ├── __init__.py
-│       │   ├── advantages.py
-│       │   ├── alignment.py
-│       │   ├── group_relative.py
-│       │   ├── kl.py
-│       │   ├── policy_gradient.py
-│       │   ├── ppo.py
-│       │   ├── returns.py
-│       │   └── rollouts.py
-│       ├── generation/
-│       │   ├── cache.py
-│       │   ├── generate.py
-│       │   └── sampling.py
-│       ├── training/
-│       │   ├── checkpoint.py
-│       │   ├── evaluation.py
-│       │   ├── losses.py
-│       │   ├── schedules.py
-│       │   └── steps.py
-│       └── utils/
-│           ├── inspection.py
-│           └── metrics.py
-│
-├── tests/
-│   ├── test_dpo_loss.py
-│   ├── test_group_relative.py
-│   ├── test_ppo_primitives.py
-│   ├── test_supervised_primitives.py
-│   ├── test_preference_primitives.py
-│   └── test_rlhf_kl_primitives.py
-├── docs/
-│   ├── lesson_22_extraction_audit.md
-│   ├── lesson_23_extraction_audit.md
-│   ├── lesson_24_extraction_audit.md
-│   ├── lesson_25_extraction_audit.md
-│   └── lesson_26_extraction_audit.md
-├── data/                # large/generated datasets are not committed
-├── checkpoints/         # ignored
-├── TORCH_FUNCTIONS.md   # PyTorch API learning tracker
-├── pyproject.toml
-├── uv.lock
-└── README.md
-```
-
----
-
-## Data and generated artifacts
-
-Large or generated files are intentionally kept out of Git.
-
-Examples include:
-
-```text
-data/raw/
-data/processed/
-checkpoints/
-runs/
-outputs/
-logs/
-```
-
-Small teaching datasets may still be committed when they are useful for explaining an implementation.
-
----
-
-## Git workflow
-
-Development uses small, meaningful commits following the [Conventional Commits](https://www.conventionalcommits.org/) format.
-
-Examples:
-
-```text
-feat(autograd): implement scalar reverse-mode autodiff
-feat(tokenization): implement character and byte-level BPE concepts
-feat(attention): implement causal self-attention
-feat(attention): implement multi-head causal attention
-feat(transformer): implement normalization and gated feed-forward networks
-docs(readme): update learning philosophy and project progress
-```
-
-The Git history is part of the learning record: small commits make it possible to see how the model was built one concept at a time.
+Changes are easiest to review when they preserve public tensor contracts, include a focused check for changed behavior, and link back to the relevant lesson. Large checkpoints, generated datasets, and experiment outputs stay outside Git.
