@@ -110,7 +110,7 @@ ipython_config.py
 
 # pdm
 #   Similar to Pipfile.lock, it is generally recommended to include pdm.lock in version control.
-#   pdm recommends including project-wide configuration in pdm.toml, but excluding .pdm-python.
+#   pdm recommends including pdm.lock in version control, but excluding .pdm-python.
 #   https://pdm-project.org/en/latest/usage/project/#working-with-version-control
 # pdm.lock
 # pdm.toml
@@ -218,9 +218,10 @@ __marimo__/
 .streamlit/secrets.toml
 
 
-# Datasets
-data/raw/
-data/processed/
+# Datasets: keep reviewed small teaching data; ignore other local artifacts.
+/data/raw/*
+!/data/raw/tinyshakespeare.txt
+/data/processed/
 
 # Model checkpoints
 checkpoints/

@@ -8,7 +8,17 @@
 
 A hands-on learning path with explicit derivations, small experiments, and a reusable PyTorch package. Build the mechanisms yourself, inspect their behavior, then compose them into a working language-model pipeline.
 
-**[Explore the lessons](#-learning-path)** · **[Run the demo](#-run-a-small-complete-example)** · **[Use the source package](src/README.md)** · **[PyTorch reference](TORCH_FUNCTIONS.md)**
+The notebook-learning workflow follows a deliberate rule:
+
+> **Learning rule:** every learning implementation is typed and worked through manually.
+>
+> AI code completion is disabled. AI may be used as a tutor for explanations, derivations, questions, discussion, and code review, but not as an autocomplete or bulk code-generation workflow.
+>
+> **If I cannot explain a line of code, it does not belong here yet.**
+
+This describes how the lessons are worked through, not a claim that repository maintenance, reusable-code extraction, or integration examples have never received AI assistance.
+
+**[Explore the lessons](#-learning-path)** · **[Run the demo](#-run-a-small-complete-example)** · **[Use the source package](src/README.md)** · **[PyTorch reference](TORCH_FUNCTIONS.md)** · **[Learning philosophy](#learning-philosophy)** · **[Data](data/README.md)**
 
 ```mermaid
 flowchart LR
@@ -30,7 +40,17 @@ flowchart LR
 | Reuse a mechanism in your own experiment | [Source guide and tensor contracts](src/README.md). |
 | See the components run together first | [Checkpoint-free SFT/DPO example](examples/tiny_sft_dpo.py). |
 
-This is an **educational implementation**, not a production training framework or a benchmark claim. Basic Python and familiarity with vectors, derivatives, and probability are helpful; the early notebooks develop the PyTorch foundations.
+## What this repository is — and is not
+
+This is primarily a **learning repository**, not a production LLM framework.
+
+Educational implementations intentionally favor clarity over efficiency. Intermediate tensors may stay visible, algorithms may first be implemented explicitly, and related mechanisms may initially be written separately when that makes their differences easier to understand.
+
+Once a mechanism has been implemented, derived, and verified, later lessons are free to use mature PyTorch primitives instead of repeatedly rebuilding the same idea.
+
+**The point is not to reinvent PyTorch forever. The point is to understand what PyTorch is doing before relying on it.**
+
+Basic Python and familiarity with vectors, derivatives, and probability are helpful; the early notebooks develop the PyTorch foundations. Toy results are learning observations, not benchmark claims.
 
 ## 🚀 Run a small, complete example
 
@@ -125,6 +145,36 @@ Read in order for the complete derivation, or use the topic links below. There a
 
 </details>
 
+## Learning philosophy
+
+### Build from simple operations upward
+
+Understand `reshape`, `transpose`, broadcasting, matrix multiplication, reductions, and softmax before hiding them inside attention. When a mechanism is new, derive it and implement it explicitly.
+
+### Predict tensor shapes and follow the gradients
+
+Ask what every tensor represents, why it has that shape, and which operations preserve or stop its gradients. Predict the next shape before running the cell; use intermediate values and diagrams to check the explanation.
+
+### Reuse a mechanism once it is understood
+
+After implementing and understanding cross-entropy, later experiments can use `torch.nn.functional.cross_entropy`. The purpose is understanding, not ritual duplication or repeatedly rebuilding PyTorch.
+
+### Refactor only after understanding the duplication
+
+Keep new ideas visible in `lessons/`. Extract small, template-independent operations into `src/llmfp/` only when their tensor contracts are understood and there is a concrete reuse role. Avoid moving a whole teaching experiment into an unnecessary framework.
+
+```text
+understand → implement explicitly → check the mechanism → selectively extract → reuse
+```
+
+### Use a meaningful check, not a checklist
+
+Prefer a small experiment that answers the question being studied: a gradient comparison, a tensor-alignment check, or a controlled policy update. More tests, algorithms, and abstractions are not automatically more understanding. Evaluate actual behavior separately from training loss, and preserve unsuccessful results as well as successful ones.
+
+### Use AI as a teacher, not as an autocomplete engine
+
+AI can explain an equation, challenge an intuition, discuss a design, review code, or suggest a useful experiment. During the learning exercises, code completion is disabled and the implementation is typed and reasoned through manually. The learner must be able to explain the code before relying on it.
+
 ## 🧩 What lives where?
 
 ```text
@@ -132,19 +182,42 @@ lessons/             Derivations, handwritten experiments, and saved observation
 src/llmfp/           Reusable model, data, generation, training, and RL primitives
 src/README.md        API map, tensor contracts, and the integration walkthrough
 examples/            Small runnable compositions of the source package
+data/                Published teaching data, provenance, and corpus preparation
 tests/               Focused numerical, gradient, and integration checks
 TORCH_FUNCTIONS.md   Searchable PyTorch signatures, examples, and outputs
 ```
 
 The source GPT uses rotary positions, RMSNorm, SwiGLU, and configurable query/KV heads. Linear attention and MoE are separate educational building blocks, not switches that silently replace the default GPT architecture. See [the module map](src/README.md#module-map).
 
+## VS Code learning environment
+
+The shared workspace configuration is in [`.vscode/settings.json`](.vscode/settings.json), with extension recommendations in [`.vscode/extensions.json`](.vscode/extensions.json).
+
+The workspace sets `chat.disableAIFeatures` to `true` and `editor.inlineSuggest.enabled` to `false`. Copilot and Copilot Chat are listed as unwanted recommendations. This is a deliberate learning setup, not a requirement that readers adopt a particular editor or an assurance that every third-party extension is disabled.
+
+The recommended extensions cover Python, Pylance, debugging, Ruff, Jupyter, and optional WSL support. Formatting on save, basic type checking, and an 88-column ruler support readable code without writing the learning implementation for you.
+
+After `uv sync`, open the repository folder in VS Code, accept the relevant extension recommendations, and select the project `.venv` Python interpreter/kernel for the notebooks. Run the notebooks with `lessons/` as the working directory where their relative paths require it.
+
 ## Working with the notebooks
 
-Open `lessons/` in VS Code with Jupyter support and select the project's `.venv` kernel. Most toy mathematics runs on CPU; checkpoint-backed GPT experiments may use CUDA.
+Most toy mathematics runs on CPU; checkpoint-backed GPT experiments may use CUDA.
 
-**Not every notebook is standalone.** Lessons 22–25 reuse locally produced GPT checkpoints from earlier lessons. Follow the checkpoint paths in each notebook; model weights and large datasets are intentionally not committed. The small example above is the independent entry point when those artifacts are unavailable.
+**Not every notebook is standalone.** Lessons 22–25 reuse locally produced GPT checkpoints from earlier lessons. Follow the checkpoint paths in each notebook; model weights and generated artifacts are not committed. The small example above is the independent entry point when those artifacts are unavailable.
 
-The learning pattern is **motivation → derivation → explicit implementation → a useful check → selective reuse**. Tensor meanings and gradient paths matter more than accumulating abstraction layers. Lower training loss is not a substitute for behavioral evaluation; the notebooks retain unsuccessful as well as successful toy outcomes.
+## 📦 Small datasets and provenance
+
+The small synthetic datasets are published as [JSONL files under `data/toy/`](data/toy/), copied from the notebook definitions without changing the labels. They include the Lesson 22 SFT training/probe examples and the chosen/rejected preference pairs from Lessons 23 and 25. The integration demo uses the same three preference-training pairs.
+
+[The data guide](data/README.md) documents schemas, source cells, serialization, and what each lesson's split means. A prompt held out from SFT may later be used in preference training: these are **lesson-specific teaching splits**, not a global untouched benchmark.
+
+Tiny Shakespeare is approximately 1.1 MB. The ignored local training file was not available for this documentation change: the saved Lesson 16 output reports **1,115,390 characters**, while the pinned upstream snapshot contains **1,115,394**. They must not be described as byte-identical. A checksum-verified downloader provides the public upstream reference without overwriting an existing local corpus:
+
+```bash
+python data/prepare_tinyshakespeare.py
+```
+
+The data guide records the exact source, checksum, and discrepancy. `.gitignore` permits the single `data/raw/tinyshakespeare.txt` file to be versioned after checking the intended corpus, while other raw/processed data and checkpoints remain ignored. The existing notebooks and their inline teaching datasets are unchanged.
 
 ## Checks and contributions
 

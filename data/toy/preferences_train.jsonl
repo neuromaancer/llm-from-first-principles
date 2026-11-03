@@ -1,0 +1,3 @@
+{"prompt": "Say yes", "chosen": "Yes", "rejected": "No"}
+{"prompt": "Say no", "chosen": "No", "rejected": "Yes"}
+{"prompt": "Say hello", "chosen": "Hello", "rejected": "Farewell"}
